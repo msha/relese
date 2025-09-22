@@ -30,15 +30,6 @@ const pageDescription = translations.page.subtitle;
   locale={locale}
   translations={translations}
 >
-  <!-- Sticky Outline for Navigation -->
-  <nav class="outline-nav" aria-label={translations.navigation.outline}>
-    <StickyOutline
-      client:load
-      releases={releases}
-      translations={translations}
-    />
-  </nav>
-
   <!-- Main Content Area -->
   <div class="content-area">
     <!-- Filter Panel -->
@@ -89,16 +80,36 @@ const pageDescription = translations.page.subtitle;
       </div>
     </section>
   </div>
+
+  <!-- Sticky Outline Navigation (sidebar) -->
+  <nav class="outline-nav" aria-label={translations.navigation.outline}>
+    <StickyOutline
+      client:load
+      releases={releases}
+      translations={translations}
+    />
+  </nav>
 </PageShell>
 
 <style>
   .outline-nav {
-    grid-column: 1;
-    position: relative;
+    grid-column: 2;
+    position: sticky;
+    top: var(--spacing-xl);
+    height: fit-content;
+    z-index: var(--z-sticky);
+  }
+
+  @media (max-width: 1024px) {
+    .outline-nav {
+      position: relative;
+      top: auto;
+      z-index: auto;
+    }
   }
 
   .content-area {
-    grid-column: 2;
+    grid-column: 1;
     position: relative;
     min-height: 100vh;
   }

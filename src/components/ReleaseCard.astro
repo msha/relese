@@ -110,13 +110,22 @@ const sections = [
     padding: var(--spacing-2xl);
     margin-bottom: var(--spacing-2xl);
     overflow: hidden;
+    background: rgba(20, 22, 38, 0.85);
+    backdrop-filter: blur(30px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
     transition: all var(--transition-normal);
   }
 
   .release-card:hover {
+    background: rgba(25, 27, 43, 0.9);
+    border-color: rgba(255, 255, 255, 0.18);
     box-shadow:
-      var(--glass-shadow),
-      0 16px 32px rgba(0, 0, 0, 0.2);
+      0 16px 48px rgba(0, 0, 0, 0.35),
+      0 0 0 1px rgba(139, 92, 246, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
 
   .release-card__header {
@@ -204,33 +213,35 @@ const sections = [
   .release-card__gradient {
     position: absolute;
     top: 0;
-    right: 0;
-    width: 50%;
+    left: 0;
+    width: 100%;
     height: 100%;
     opacity: 0.3;
     pointer-events: none;
     z-index: 1;
   }
 
-  /* Alternating gradient directions for visual rhythm */
+  /* Cosmic atmospheric gradients for visual rhythm */
   .release-card[data-alternating="false"] .release-card__gradient {
     background: radial-gradient(
       circle at 80% 30%,
-      color-mix(in srgb, var(--accent-purple) 25%, transparent) 0%,
-      color-mix(in srgb, var(--accent-indigo) 15%, transparent) 60%,
-      transparent 100%
+      rgba(139, 92, 246, 0.1) 0%,
+      rgba(99, 102, 241, 0.05) 40%,
+      transparent 65%
     );
+    filter: blur(1px);
+    mix-blend-mode: screen;
   }
 
   .release-card[data-alternating="true"] .release-card__gradient {
-    left: 0;
-    right: auto;
     background: radial-gradient(
       circle at 20% 70%,
-      color-mix(in srgb, var(--accent-emerald) 25%, transparent) 0%,
-      color-mix(in srgb, var(--accent-purple) 15%, transparent) 60%,
-      transparent 100%
+      rgba(16, 185, 129, 0.1) 0%,
+      rgba(139, 92, 246, 0.05) 40%,
+      transparent 65%
     );
+    filter: blur(1px);
+    mix-blend-mode: screen;
   }
 
   /* Responsive Design */
@@ -255,9 +266,6 @@ const sections = [
       gap: var(--spacing-sm);
     }
 
-    .release-card__gradient {
-      width: 70%;
-    }
   }
 
   @media (max-width: 480px) {

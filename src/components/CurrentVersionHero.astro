@@ -1,7 +1,7 @@
 ---
 import type { Release, Translations, Locale } from '../types/index.js';
 import { formatDate } from '../i18n/utils.js';
-import { generateReleaseId } from '../data/utils.js';
+import { generateReleaseId, generateSectionId } from '../data/utils.js';
 
 export interface Props {
   release: Release;
@@ -34,6 +34,47 @@ const getTypeColor = (type: string) => {
 };
 
 const typeColor = getTypeColor(release.type);
+
+// Icon mapping for different section types
+const getIcon = (sectionId: string): string => {
+  if (sectionId.includes('highlights')) return '✨';
+  if (sectionId.includes('features')) return '🚀';
+  if (sectionId.includes('improvements')) return '⚡';
+  if (sectionId.includes('bugfixes')) return '🔧';
+  return '📋';
+};
+
+// Sections to display (only if they have content)
+const sections = [
+  {
+    id: 'highlights' as const,
+    title: translations.sections.highlights,
+    items: release.highlights,
+    gradient: 'var(--gradient-text-highlights)',
+    icon: getIcon('highlights'),
+  },
+  {
+    id: 'features' as const,
+    title: translations.sections.features,
+    items: release.features,
+    gradient: 'var(--gradient-text-features)',
+    icon: getIcon('features'),
+  },
+  {
+    id: 'improvements' as const,
+    title: translations.sections.improvements,
+    items: release.improvements,
+    gradient: 'var(--gradient-text-improvements)',
+    icon: getIcon('improvements'),
+  },
+  {
+    id: 'bugfixes' as const,
+    title: translations.sections.bugfixes,
+    items: release.bugfixes,
+    gradient: 'var(--gradient-text-bugfixes)',
+    icon: getIcon('bugfixes'),
+  },
+].filter(section => section.items.length > 0);
 ---
 
 <section class="hero" id={releaseId} data-release={release.version} aria-labelledby="hero-title">
@@ -58,21 +99,31 @@ const typeColor = getTypeColor(release.type);
       </div>
     </div>
 
-    {release.highlights.length > 0 && (
-      <div class="hero__highlights" id={`release-${release.version.replace(/\./g, '-')}-highlights`} data-section={`release-${release.version.replace(/\./g, '-')}-highlights`}>
-        <h3 class="hero__highlights-title">
-          {translations.sections.highlights}
-        </h3>
-        <ul class="hero__highlights-list">
-          {release.highlights.map((highlight, index) => (
-            <li key={index} class="hero__highlight-item">
-              <span class="hero__highlight-icon" aria-hidden="true">✨</span>
-              <span class="hero__highlight-text">{highlight}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    )}
+    <!-- Content sections -->
+    <div class="hero__content">
+      {sections.map((section) => (
+        <div
+          key={section.id}
+          class="hero__section"
+          id={generateSectionId(release.version, section.id)}
+          data-section={generateSectionId(release.version, section.id)}
+          aria-labelledby={`hero-${section.id}-title`}
+        >
+          <h3 id={`hero-${section.id}-title`} class="hero__section-title" style={`--section-gradient: ${section.gradient}`}>
+            <span class="hero__section-icon" aria-hidden="true">{section.icon}</span>
+            {section.title}
+          </h3>
+          <ul class="hero__section-list">
+            {section.items.map((item, index) => (
+              <li key={index} class="hero__section-item">
+                <span class="hero__section-bullet" aria-hidden="true"></span>
+                <span class="hero__section-text">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
 
     <!-- Ambient gradient background -->
     <div class="hero__gradient" aria-hidden="true"></div>
@@ -89,13 +140,23 @@ const typeColor = getTypeColor(release.type);
     border-radius: var(--radius-xl);
     padding: var(--spacing-2xl);
     overflow: hidden;
+    background: rgba(25, 27, 43, 0.9);
+    backdrop-filter: blur(35px) saturate(1.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(139, 92, 246, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
     transition: all var(--transition-normal);
   }
 
   .hero__card:hover {
+    background: rgba(30, 32, 48, 0.95);
+    border-color: rgba(255, 255, 255, 0.2);
     box-shadow:
-      var(--glass-shadow),
-      0 20px 40px rgba(0, 0, 0, 0.2);
+      0 20px 60px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(139, 92, 246, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   .hero__header {
@@ -162,23 +223,38 @@ const typeColor = getTypeColor(release.type);
     font-weight: var(--font-weight-medium);
   }
 
-  .hero__highlights {
+  .hero__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
     position: relative;
     z-index: 2;
   }
 
-  .hero__highlights-title {
+  .hero__section {
+    padding: var(--spacing-lg) 0;
+  }
+
+  .hero__section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
     font-size: var(--font-size-xl);
     font-weight: var(--font-weight-bold);
-    color: var(--text-primary);
     margin: 0 0 var(--spacing-lg) 0;
-    background: var(--gradient-text-highlights);
+    background: var(--section-gradient);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    line-height: var(--line-height-tight);
   }
 
-  .hero__highlights-list {
+  .hero__section-icon {
+    font-size: var(--font-size-lg);
+    flex-shrink: 0;
+  }
+
+  .hero__section-list {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -187,7 +263,7 @@ const typeColor = getTypeColor(release.type);
     gap: var(--spacing-md);
   }
 
-  .hero__highlight-item {
+  .hero__section-item {
     display: flex;
     align-items: flex-start;
     gap: var(--spacing-md);
@@ -196,20 +272,39 @@ const typeColor = getTypeColor(release.type);
     border-radius: var(--radius-md);
     border: 1px solid rgba(255, 255, 255, 0.1);
     transition: all var(--transition-fast);
+    margin-left: calc(var(--font-size-lg) + var(--spacing-md));
   }
 
-  .hero__highlight-item:hover {
+  .hero__section-item:hover {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.2);
   }
 
-  .hero__highlight-icon {
+  .hero__section-bullet {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--section-gradient);
     flex-shrink: 0;
-    font-size: var(--font-size-lg);
-    margin-top: 2px;
+    margin-top: 0.7em;
+    position: relative;
   }
 
-  .hero__highlight-text {
+  .hero__section-bullet::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: var(--section-gradient);
+    opacity: 0.3;
+    transition: opacity var(--transition-fast);
+  }
+
+  .hero__section-item:hover .hero__section-bullet::before {
+    opacity: 0.6;
+  }
+
+  .hero__section-text {
     flex: 1;
     font-size: var(--font-size-lg);
     line-height: var(--line-height-relaxed);
@@ -220,15 +315,17 @@ const typeColor = getTypeColor(release.type);
   .hero__gradient {
     position: absolute;
     top: 0;
-    right: 0;
-    width: 60%;
+    left: 0;
+    width: 100%;
     height: 100%;
     background: radial-gradient(
       circle at 80% 20%,
-      color-mix(in srgb, var(--accent-purple) 30%, transparent) 0%,
-      color-mix(in srgb, var(--accent-indigo) 20%, transparent) 50%,
-      transparent 100%
+      rgba(139, 92, 246, 0.12) 0%,
+      rgba(99, 102, 241, 0.06) 50%,
+      transparent 70%
     );
+    filter: blur(1px);
+    mix-blend-mode: screen;
     pointer-events: none;
     z-index: 1;
   }
@@ -255,17 +352,19 @@ const typeColor = getTypeColor(release.type);
       font-size: var(--font-size-base);
     }
 
-    .hero__highlights-title {
+    .hero__section-title {
       font-size: var(--font-size-lg);
+      gap: var(--spacing-sm);
     }
 
-    .hero__highlight-text {
+    .hero__section-text {
       font-size: var(--font-size-base);
     }
 
-    .hero__gradient {
-      width: 80%;
+    .hero__section-item {
+      margin-left: calc(var(--font-size-base) + var(--spacing-sm));
     }
+
   }
 
   @media (max-width: 480px) {
@@ -281,6 +380,20 @@ const typeColor = getTypeColor(release.type);
       flex-direction: column;
       align-items: flex-start;
     }
+
+    .hero__section {
+      padding: var(--spacing-md) 0;
+    }
+
+    .hero__section-item {
+      margin-left: 0;
+      padding: var(--spacing-sm) 0;
+    }
+
+    .hero__section-item:hover {
+      transform: none;
+      background: transparent;
+    }
   }
 
   /* Reduced motion support */
@@ -293,7 +406,11 @@ const typeColor = getTypeColor(release.type);
       transform: none;
     }
 
-    .hero__highlight-item:hover {
+    .hero__section-item {
+      transition: none;
+    }
+
+    .hero__section-item:hover {
       transform: none;
     }
   }
@@ -309,8 +426,20 @@ const typeColor = getTypeColor(release.type);
       border-width: 2px;
     }
 
-    .hero__highlight-item {
+    .hero__section-item {
       border-width: 2px;
+    }
+
+    .hero__section-bullet {
+      background: var(--text-primary);
+    }
+
+    .hero__section-bullet::before {
+      background: var(--text-primary);
+    }
+
+    .hero__section-text {
+      color: var(--text-primary);
     }
   }
 </style>

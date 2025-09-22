@@ -39,8 +39,8 @@ function useIntersectionObserver(
   const observe = useCallback((element: Element) => {
     if (!observerRef.current) {
       observerRef.current = new IntersectionObserver(callback, {
-        rootMargin: '-10% 0px -10% 0px',
-        threshold: [0, 0.25, 0.5, 0.75, 1],
+        rootMargin: '-20% 0px -20% 0px',
+        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
         ...options,
       });
     }
@@ -66,6 +66,12 @@ function useIntersectionObserver(
   return { observe, unobserve, disconnect };
 }
 
+// Helper function to get element top position
+function getElementTop(id: string): number {
+  const element = document.getElementById(id) || document.querySelector(`[data-release="${id}"], [data-section="${id}"]`);
+  return element ? element.getBoundingClientRect().top + window.scrollY : Infinity;
+}
+
 // Custom hook for scroll tracking with debouncing
 function useScrollTracking(releases: NavigationRelease[]) {
   const [scrollState, setScrollState] = useState<ScrollState>({
@@ -75,10 +81,10 @@ function useScrollTracking(releases: NavigationRelease[]) {
     passedSections: new Set(),
   });
 
-  const updateTimeoutRef = useRef<number>();
+  const updateTimeoutRef = useRef<number | null>(null);
 
   const debouncedUpdate = useCallback((newState: Partial<ScrollState>) => {
-    if (updateTimeoutRef.current) {
+    if (updateTimeoutRef.current !== null) {
       cancelAnimationFrame(updateTimeoutRef.current);
     }
 
@@ -93,7 +99,7 @@ function useScrollTracking(releases: NavigationRelease[]) {
   const handleIntersection = useCallback((entries: IntersectionObserverEntry[]) => {
     const viewportTop = 0;
     const viewportHeight = window.innerHeight;
-    const centerY = viewportHeight * 0.3; // Consider items in upper 30% as "active"
+    const centerY = viewportHeight * 0.5; // Consider items in upper 50% as "active"
 
     let newActiveRelease: string | null = null;
     let newActiveSection: string | null = null;
@@ -125,10 +131,18 @@ function useScrollTracking(releases: NavigationRelease[]) {
 
       // Check if element is currently active (visible and near top of viewport)
       if (entry.isIntersecting && elementTop <= centerY && elementBottom > viewportTop) {
-        if (entry.target.hasAttribute('data-release') && !newActiveRelease) {
-          newActiveRelease = entry.target.getAttribute('data-release');
-        } else if (entry.target.hasAttribute('data-section') && !newActiveSection) {
-          newActiveSection = entry.target.getAttribute('data-section');
+        if (entry.target.hasAttribute('data-release')) {
+          const releaseVersion = entry.target.getAttribute('data-release')!;
+          // Prioritize the release that's highest in the viewport
+          if (!newActiveRelease || elementTop < getElementTop(newActiveRelease)) {
+            newActiveRelease = releaseVersion;
+          }
+        } else if (entry.target.hasAttribute('data-section')) {
+          const sectionId = entry.target.getAttribute('data-section')!;
+          // Prioritize the section that's highest in the viewport
+          if (!newActiveSection || elementTop < getElementTop(newActiveSection)) {
+            newActiveSection = sectionId;
+          }
         }
       }
     }
@@ -145,14 +159,23 @@ function useScrollTracking(releases: NavigationRelease[]) {
 
   // Set up observers for all release and section elements
   useEffect(() => {
-    const releaseElements = document.querySelectorAll('[data-release]');
-    const sectionElements = document.querySelectorAll('[data-section]');
+    const setupObservers = () => {
+      const releaseElements = document.querySelectorAll('[data-release]');
+      const sectionElements = document.querySelectorAll('[data-section]');
 
-    [...releaseElements, ...sectionElements].forEach(element => {
-      observe(element);
-    });
+      [...releaseElements, ...sectionElements].forEach(element => {
+        observe(element);
+      });
+    };
+
+    // Delay setup to ensure all elements are in DOM
+    const timeoutId = setTimeout(setupObservers, 100);
 
     return () => {
+      clearTimeout(timeoutId);
+      const releaseElements = document.querySelectorAll('[data-release]');
+      const sectionElements = document.querySelectorAll('[data-section]');
+
       [...releaseElements, ...sectionElements].forEach(element => {
         unobserve(element);
       });
@@ -163,7 +186,7 @@ function useScrollTracking(releases: NavigationRelease[]) {
   useEffect(() => {
     return () => {
       disconnect();
-      if (updateTimeoutRef.current) {
+      if (updateTimeoutRef.current !== null) {
         cancelAnimationFrame(updateTimeoutRef.current);
       }
     };
@@ -182,13 +205,14 @@ export default function StickyOutline({ releases, translations, onNavigate }: St
     version: release.version,
     anchor: `release-${release.version.replace(/\./g, '-')}`,
     sections: [
-      { id: 'highlights', title: translations.sections.highlights, anchor: `release-${release.version.replace(/\./g, '-')}-highlights` },
-      { id: 'features', title: translations.sections.features, anchor: `release-${release.version.replace(/\./g, '-')}-features` },
-      { id: 'improvements', title: translations.sections.improvements, anchor: `release-${release.version.replace(/\./g, '-')}-improvements` },
-      { id: 'bugfixes', title: translations.sections.bugfixes, anchor: `release-${release.version.replace(/\./g, '-')}-bugfixes` }
+      { id: 'highlights' as const, title: translations.sections.highlights, anchor: `release-${release.version.replace(/\./g, '-')}-highlights` },
+      { id: 'features' as const, title: translations.sections.features, anchor: `release-${release.version.replace(/\./g, '-')}-features` },
+      { id: 'improvements' as const, title: translations.sections.improvements, anchor: `release-${release.version.replace(/\./g, '-')}-improvements` },
+      { id: 'bugfixes' as const, title: translations.sections.bugfixes, anchor: `release-${release.version.replace(/\./g, '-')}-bugfixes` }
     ].filter(section => {
       // Only include sections that have content
-      const sectionData = release[section.id];
+      const key: keyof Pick<Release, 'highlights' | 'features' | 'improvements' | 'bugfixes'> = section.id;
+      const sectionData = release[key];
       return Array.isArray(sectionData) && sectionData.length > 0;
     })
   }));
@@ -207,6 +231,8 @@ export default function StickyOutline({ releases, translations, onNavigate }: St
     window.addEventListener('resize', checkBreakpoints);
     return () => window.removeEventListener('resize', checkBreakpoints);
   }, []);
+
+  // The sticky behavior is now handled by the container CSS
 
   // Smooth scroll navigation
   const handleNavigation = useCallback((anchor: string, releaseVersion?: string, sectionId?: string) => {
