@@ -1,0 +1,43 @@
+{
+  "page": {
+    "title": "Release Notes",
+    "subtitle": "Track all updates and improvements to our platform"
+  },
+  "navigation": {
+    "skipToContent": "Skip to main content",
+    "outline": "Release Outline"
+  },
+  "filters": {
+    "version": "Version",
+    "dateRange": "Date Range",
+    "type": "Release Type",
+    "clearAll": "Clear All",
+    "thisYear": "This Year",
+    "lastYear": "Last Year",
+    "older": "Older"
+  },
+  "releaseTypes": {
+    "initial": "Initial",
+    "major": "Major",
+    "minor": "Minor",
+    "patch": "Patch",
+    "hotfix": "Hotfix"
+  },
+  "sections": {
+    "highlights": "Highlights",
+    "features": "New Features",
+    "improvements": "Improvements",
+    "bugfixes": "Bug Fixes"
+  },
+  "states": {
+    "loading": "Loading release notes...",
+    "error": "Failed to load release notes",
+    "retry": "Retry",
+    "empty": "No releases match your filters",
+    "support": "Need help? Contact support"
+  },
+  "currentVersion": {
+    "latest": "Latest Release",
+    "releasedOn": "Released on"
+  }
+}

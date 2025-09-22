@@ -1,0 +1,293 @@
+---
+// Example usage of StickyOutline component in an Astro page
+import StickyOutline from '../islands/StickyOutline.tsx';
+import { getTranslations } from '../i18n/utils';
+import type { Release } from '../types/release';
+
+// Example release data - replace with your actual data source
+const sampleReleases: Release[] = [
+  {
+    version: "2.1.0",
+    date: "2024-01-15",
+    type: "minor",
+    highlights: ["New dashboard design", "Improved performance"],
+    features: ["Dark mode support", "Export functionality"],
+    improvements: ["Faster loading times", "Better mobile responsiveness"],
+    bugfixes: ["Fixed navigation bug", "Resolved login issues"]
+  },
+  {
+    version: "2.0.1",
+    date: "2024-01-10",
+    type: "patch",
+    highlights: [],
+    features: [],
+    improvements: ["Updated dependencies"],
+    bugfixes: ["Critical security patch", "Fixed memory leak"]
+  },
+  {
+    version: "2.0.0",
+    date: "2024-01-01",
+    type: "major",
+    highlights: ["Complete UI redesign", "New API architecture"],
+    features: ["Real-time collaboration", "Advanced analytics"],
+    improvements: ["Performance optimizations", "Enhanced security"],
+    bugfixes: ["Legacy compatibility fixes"]
+  }
+];
+
+// Get translations for the current locale
+const translations = await getTranslations('en');
+---
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Release Notes with Sticky Outline</title>
+  <link rel="stylesheet" href="../styles/global.css" />
+</head>
+<body>
+  <div class="page-layout">
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <div class="content-grid">
+        <!-- Sidebar with Sticky Outline (Desktop) -->
+        <aside class="sidebar">
+          <StickyOutline
+            client:load
+            releases={sampleReleases}
+            translations={translations}
+            onNavigate={(anchor, releaseVersion, sectionId) => {
+              console.log('Navigation:', { anchor, releaseVersion, sectionId });
+            }}
+          />
+        </aside>
+
+        <!-- Content Area -->
+        <div class="content">
+          <!-- Mobile/Tablet Outline -->
+          <div class="mobile-outline">
+            <StickyOutline
+              client:load
+              releases={sampleReleases}
+              translations={translations}
+              onNavigate={(anchor, releaseVersion, sectionId) => {
+                console.log('Navigation:', { anchor, releaseVersion, sectionId });
+              }}
+            />
+          </div>
+
+          <!-- Release Sections -->
+          {sampleReleases.map((release) => (
+            <section
+              id={`release-${release.version.replace(/\./g, '-')}`}
+              data-release={release.version}
+              class="release-section"
+            >
+              <h2 class="release-title">Version {release.version}</h2>
+              <p class="release-date">Released on {release.date}</p>
+
+              {release.highlights.length > 0 && (
+                <section
+                  id={`highlights-${release.version.replace(/\./g, '-')}`}
+                  data-section={`highlights-${release.version.replace(/\./g, '-')}`}
+                  class="release-subsection"
+                >
+                  <h3 class="section-title highlights">{translations.sections.highlights}</h3>
+                  <ul class="section-list">
+                    {release.highlights.map((item) => (
+                      <li class="section-item">{item}</li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {release.features.length > 0 && (
+                <section
+                  id={`features-${release.version.replace(/\./g, '-')}`}
+                  data-section={`features-${release.version.replace(/\./g, '-')}`}
+                  class="release-subsection"
+                >
+                  <h3 class="section-title features">{translations.sections.features}</h3>
+                  <ul class="section-list">
+                    {release.features.map((item) => (
+                      <li class="section-item">{item}</li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {release.improvements.length > 0 && (
+                <section
+                  id={`improvements-${release.version.replace(/\./g, '-')}`}
+                  data-section={`improvements-${release.version.replace(/\./g, '-')}`}
+                  class="release-subsection"
+                >
+                  <h3 class="section-title improvements">{translations.sections.improvements}</h3>
+                  <ul class="section-list">
+                    {release.improvements.map((item) => (
+                      <li class="section-item">{item}</li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {release.bugfixes.length > 0 && (
+                <section
+                  id={`bugfixes-${release.version.replace(/\./g, '-')}`}
+                  data-section={`bugfixes-${release.version.replace(/\./g, '-')}`}
+                  class="release-subsection"
+                >
+                  <h3 class="section-title bugfixes">{translations.sections.bugfixes}</h3>
+                  <ul class="section-list">
+                    {release.bugfixes.map((item) => (
+                      <li class="section-item">{item}</li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </section>
+          ))}
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <style>
+    .page-layout {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+    }
+
+    .main-content {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: var(--spacing-xl);
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: var(--outline-width) 1fr;
+      gap: var(--spacing-2xl);
+      align-items: start;
+    }
+
+    .sidebar {
+      position: relative;
+    }
+
+    .mobile-outline {
+      display: none;
+    }
+
+    .release-section {
+      margin-bottom: var(--spacing-2xl);
+      padding: var(--spacing-xl);
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--glass-shadow);
+    }
+
+    .release-title {
+      font-size: var(--font-size-3xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .release-date {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .release-subsection {
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .section-title {
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-bold);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .section-title.highlights {
+      background: var(--gradient-text-highlights);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .section-title.features {
+      background: var(--gradient-text-features);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .section-title.improvements {
+      background: var(--gradient-text-improvements);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .section-title.bugfixes {
+      background: var(--gradient-text-bugfixes);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .section-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .section-item {
+      padding: var(--spacing-sm) 0;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .section-item:last-child {
+      border-bottom: none;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1023px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .mobile-outline {
+        display: block;
+        margin-bottom: var(--spacing-xl);
+      }
+    }
+
+    @media (max-width: 767px) {
+      .main-content {
+        padding: var(--spacing-lg);
+      }
+
+      .release-section {
+        padding: var(--spacing-lg);
+      }
+
+      .release-title {
+        font-size: var(--font-size-2xl);
+      }
+    }
+  </style>
+</body>
+</html>

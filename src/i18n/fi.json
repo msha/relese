@@ -1,0 +1,43 @@
+{
+  "page": {
+    "title": "Julkaisuhistoria",
+    "subtitle": "Seuraa kaikkia alustamme päivityksiä ja parannuksia"
+  },
+  "navigation": {
+    "skipToContent": "Siirry pääsisältöön",
+    "outline": "Julkaisujen sisällysluettelo"
+  },
+  "filters": {
+    "version": "Versio",
+    "dateRange": "Aikaväli",
+    "type": "Julkaisutyyppi",
+    "clearAll": "Tyhjennä kaikki",
+    "thisYear": "Tämä vuosi",
+    "lastYear": "Viime vuosi",
+    "older": "Vanhemmat"
+  },
+  "releaseTypes": {
+    "initial": "Ensimmäinen",
+    "major": "Iso",
+    "minor": "Pieni",
+    "patch": "Korjaus",
+    "hotfix": "Kiireellinen korjaus"
+  },
+  "sections": {
+    "highlights": "Kohokohtia",
+    "features": "Uudet ominaisuudet",
+    "improvements": "Parannuksia",
+    "bugfixes": "Vikakorjauksia"
+  },
+  "states": {
+    "loading": "Ladataan julkaisuhistoriaa...",
+    "error": "Julkaisuhistorian lataus epäonnistui",
+    "retry": "Yritä uudelleen",
+    "empty": "Mikään julkaisu ei vastaa suodattimiasi",
+    "support": "Tarvitsetko apua? Ota yhteyttä tukeen"
+  },
+  "currentVersion": {
+    "latest": "Uusin julkaisu",
+    "releasedOn": "Julkaistu"
+  }
+}

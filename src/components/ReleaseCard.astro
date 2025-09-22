@@ -1,0 +1,290 @@
+---
+import type { Release, Translations, Locale } from '../types/index.js';
+import { formatDate } from '../i18n/utils.js';
+import { generateReleaseId, generateSectionId } from '../data/utils.js';
+import ReleaseSection from './ReleaseSection.astro';
+
+export interface Props {
+  release: Release;
+  translations: Translations;
+  locale: Locale;
+  isAlternating?: boolean;
+}
+
+const { release, translations, locale, isAlternating = false } = Astro.props;
+
+const releaseDate = new Date(release.date);
+const formattedDate = formatDate(releaseDate, locale);
+const releaseId = generateReleaseId(release.version);
+
+// Get type-specific styling
+const getTypeColor = (type: string) => {
+  switch (type) {
+    case 'major':
+      return '#ef4444';
+    case 'minor':
+      return '#8b5cf6';
+    case 'patch':
+      return '#10b981';
+    case 'hotfix':
+      return '#f59e0b';
+    case 'initial':
+      return '#6366f1';
+    default:
+      return '#8b5cf6';
+  }
+};
+
+const typeColor = getTypeColor(release.type);
+
+// Sections to display (only if they have content)
+const sections = [
+  {
+    id: 'highlights' as const,
+    title: translations.sections.highlights,
+    items: release.highlights,
+    gradient: 'var(--gradient-text-highlights)',
+  },
+  {
+    id: 'features' as const,
+    title: translations.sections.features,
+    items: release.features,
+    gradient: 'var(--gradient-text-features)',
+  },
+  {
+    id: 'improvements' as const,
+    title: translations.sections.improvements,
+    items: release.improvements,
+    gradient: 'var(--gradient-text-improvements)',
+  },
+  {
+    id: 'bugfixes' as const,
+    title: translations.sections.bugfixes,
+    items: release.bugfixes,
+    gradient: 'var(--gradient-text-bugfixes)',
+  },
+].filter(section => section.items.length > 0);
+---
+
+<article class="release-card glass" id={releaseId} data-release={release.version} data-alternating={isAlternating}>
+  <header class="release-card__header">
+    <div class="release-card__meta">
+      <h2 class="release-card__version">
+        <a href={`#${releaseId}`} class="release-card__version-link">
+          v{release.version}
+        </a>
+      </h2>
+      <div class="release-card__info">
+        <time datetime={release.date} class="release-card__date">
+          {formattedDate}
+        </time>
+        <span class="release-card__type-chip" style={`--type-color: ${typeColor}`}>
+          {translations.releaseTypes[release.type]}
+        </span>
+      </div>
+    </div>
+  </header>
+
+  {sections.length > 0 && (
+    <div class="release-card__content">
+      {sections.map((section) => (
+        <ReleaseSection
+          key={section.id}
+          id={generateSectionId(release.version, section.id)}
+          title={section.title}
+          items={section.items}
+          gradient={section.gradient}
+        />
+      ))}
+    </div>
+  )}
+
+  <!-- Decorative radial gradient -->
+  <div class="release-card__gradient" aria-hidden="true"></div>
+</article>
+
+<style>
+  .release-card {
+    position: relative;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-2xl);
+    margin-bottom: var(--spacing-2xl);
+    overflow: hidden;
+    transition: all var(--transition-normal);
+  }
+
+  .release-card:hover {
+    box-shadow:
+      var(--glass-shadow),
+      0 16px 32px rgba(0, 0, 0, 0.2);
+  }
+
+  .release-card__header {
+    margin-bottom: var(--spacing-xl);
+    position: relative;
+    z-index: 2;
+  }
+
+  .release-card__meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+  }
+
+  .release-card__version {
+    margin: 0;
+    flex: 1;
+  }
+
+  .release-card__version-link {
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+    text-decoration: none;
+    line-height: var(--line-height-tight);
+    transition: color var(--transition-fast);
+    background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .release-card__version-link:hover,
+  .release-card__version-link:focus {
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-indigo));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    outline: none;
+  }
+
+  .release-card__version-link:focus-visible {
+    outline: 2px solid var(--accent-purple);
+    outline-offset: 4px;
+    border-radius: var(--radius-sm);
+  }
+
+  .release-card__info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+  }
+
+  .release-card__date {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .release-card__type-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-md);
+    background: color-mix(in srgb, var(--type-color) 20%, transparent);
+    color: var(--type-color);
+    border: 1px solid color-mix(in srgb, var(--type-color) 50%, transparent);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    text-transform: capitalize;
+    white-space: nowrap;
+  }
+
+  .release-card__content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+  }
+
+  .release-card__gradient {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Alternating gradient directions for visual rhythm */
+  .release-card[data-alternating="false"] .release-card__gradient {
+    background: radial-gradient(
+      circle at 80% 30%,
+      color-mix(in srgb, var(--accent-purple) 25%, transparent) 0%,
+      color-mix(in srgb, var(--accent-indigo) 15%, transparent) 60%,
+      transparent 100%
+    );
+  }
+
+  .release-card[data-alternating="true"] .release-card__gradient {
+    left: 0;
+    right: auto;
+    background: radial-gradient(
+      circle at 20% 70%,
+      color-mix(in srgb, var(--accent-emerald) 25%, transparent) 0%,
+      color-mix(in srgb, var(--accent-purple) 15%, transparent) 60%,
+      transparent 100%
+    );
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .release-card {
+      padding: var(--spacing-xl);
+    }
+
+    .release-card__meta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-md);
+    }
+
+    .release-card__version-link {
+      font-size: var(--font-size-2xl);
+    }
+
+    .release-card__info {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-sm);
+    }
+
+    .release-card__gradient {
+      width: 70%;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .release-card {
+      padding: var(--spacing-lg);
+    }
+
+    .release-card__version-link {
+      font-size: var(--font-size-xl);
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .release-card {
+      transition: none;
+    }
+
+    .release-card:hover {
+      transform: none;
+    }
+  }
+
+  /* High contrast mode */
+  @media (prefers-contrast: high) {
+    .release-card__type-chip {
+      border-width: 2px;
+    }
+  }
+</style>

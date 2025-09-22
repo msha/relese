@@ -1,0 +1,67 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Header from '../components/Header.astro';
+import type { Locale, Translations } from '../types/index.js';
+
+export interface Props {
+  title: string;
+  description?: string;
+  locale: Locale;
+  translations: Translations;
+}
+
+const { title, description, locale, translations } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} locale={locale}>
+  <div class="page-shell">
+    <Header translations={translations} locale={locale}>
+      <slot name="locale-switcher" slot="locale-switcher" />
+    </Header>
+
+    <main id="main-content" class="main" role="main">
+      <div class="main__container">
+        <slot />
+      </div>
+    </main>
+  </div>
+</BaseLayout>
+
+<style>
+  .page-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .main {
+    flex: 1;
+    position: relative;
+  }
+
+  .main__container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 var(--gutter-desktop);
+    display: grid;
+    grid-template-columns: var(--outline-width) 1fr;
+    gap: var(--spacing-2xl);
+    align-items: start;
+  }
+
+  /* Responsive layout adjustments */
+  @media (max-width: 1024px) {
+    .main__container {
+      padding: 0 var(--gutter-tablet);
+      grid-template-columns: 1fr;
+      gap: var(--spacing-xl);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .main__container {
+      padding: 0 var(--gutter-mobile);
+      gap: var(--spacing-lg);
+    }
+  }
+</style>

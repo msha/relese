@@ -1,0 +1,132 @@
+[
+  {
+    "version": "2.1.0",
+    "date": "2024-12-15T10:00:00Z",
+    "type": "minor",
+    "highlights": [
+      "Enhanced performance with 40% faster load times",
+      "New dark mode support across all components",
+      "Improved mobile responsiveness"
+    ],
+    "features": [
+      "Added dark mode toggle in user preferences",
+      "Implemented real-time collaboration features",
+      "New dashboard analytics widgets",
+      "Enhanced search functionality with filters"
+    ],
+    "improvements": [
+      "Optimized image loading and caching",
+      "Improved error handling and user feedback",
+      "Enhanced accessibility compliance (WCAG 2.1 AA)",
+      "Better keyboard navigation support"
+    ],
+    "bugfixes": [
+      "Fixed memory leak in data visualization components",
+      "Resolved issue with form validation in Firefox",
+      "Fixed broken responsive layout on tablets",
+      "Corrected timezone display issues"
+    ]
+  },
+  {
+    "version": "2.0.1",
+    "date": "2024-11-28T14:30:00Z",
+    "type": "patch",
+    "highlights": [
+      "Critical security updates",
+      "Performance improvements for large datasets"
+    ],
+    "features": [],
+    "improvements": [
+      "Enhanced data processing speed by 25%",
+      "Improved error logging and monitoring"
+    ],
+    "bugfixes": [
+      "Fixed critical security vulnerability in authentication",
+      "Resolved data synchronization issues",
+      "Fixed broken export functionality",
+      "Corrected calculation errors in reports"
+    ]
+  },
+  {
+    "version": "2.0.0",
+    "date": "2024-10-15T09:00:00Z",
+    "type": "major",
+    "highlights": [
+      "Complete UI redesign with modern glassmorphic aesthetics",
+      "New API architecture with GraphQL support",
+      "Enhanced security with zero-trust architecture"
+    ],
+    "features": [
+      "Brand new user interface with glassmorphic design",
+      "GraphQL API for flexible data querying",
+      "Advanced user role management system",
+      "New reporting and analytics dashboard",
+      "Multi-language support (English, Finnish)",
+      "Progressive Web App (PWA) capabilities"
+    ],
+    "improvements": [
+      "Completely rewritten frontend for better performance",
+      "Enhanced security protocols and encryption",
+      "Improved database performance and scalability",
+      "Better error handling across all components"
+    ],
+    "bugfixes": [
+      "Resolved legacy browser compatibility issues",
+      "Fixed data migration problems from v1.x",
+      "Corrected memory usage in intensive operations"
+    ]
+  },
+  {
+    "version": "1.9.2",
+    "date": "2024-09-20T16:45:00Z",
+    "type": "hotfix",
+    "highlights": [
+      "Emergency fix for payment processing issue"
+    ],
+    "features": [],
+    "improvements": [],
+    "bugfixes": [
+      "Fixed critical payment processing failure",
+      "Resolved timeout issues in checkout process",
+      "Fixed incorrect tax calculations"
+    ]
+  },
+  {
+    "version": "1.9.1",
+    "date": "2024-09-10T11:20:00Z",
+    "type": "patch",
+    "highlights": [
+      "Minor bug fixes and stability improvements"
+    ],
+    "features": [],
+    "improvements": [
+      "Enhanced form validation feedback",
+      "Improved loading states and animations"
+    ],
+    "bugfixes": [
+      "Fixed date picker issues in Safari",
+      "Resolved CSV export formatting problems",
+      "Fixed notification badge counter",
+      "Corrected responsive layout on small screens"
+    ]
+  },
+  {
+    "version": "1.0.0",
+    "date": "2023-06-01T12:00:00Z",
+    "type": "initial",
+    "highlights": [
+      "Initial release of the platform",
+      "Core functionality for project management",
+      "User authentication and basic permissions"
+    ],
+    "features": [
+      "User registration and authentication system",
+      "Project creation and management",
+      "Basic dashboard with project overview",
+      "File upload and storage capabilities",
+      "Email notifications for key events"
+    ],
+    "improvements": [],
+    "bugfixes": []
+  }
+]

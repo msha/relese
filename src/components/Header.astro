@@ -1,0 +1,467 @@
+---
+import type { Locale, Translations } from '../types/index.js';
+
+export interface Props {
+  translations: Translations;
+  locale: Locale;
+}
+
+const { translations } = Astro.props;
+---
+
+<header class="header" role="banner">
+  <div class="header__container">
+    <!-- Top navigation bar -->
+    <nav class="header__nav" role="navigation" aria-label="Main navigation">
+      <div class="header__brand">
+        <div class="header__logo">
+          <svg class="header__logo-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z"/>
+          </svg>
+          <span class="header__logo-text">Aurora Platform</span>
+        </div>
+        <span class="header__version-badge">v2.1.0</span>
+      </div>
+
+      <div class="header__nav-links">
+        <a href="https://docs.aurora-platform.com" class="header__nav-link" target="_blank" rel="noopener noreferrer">
+          <svg class="header__nav-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Documentation
+        </a>
+        <a href="https://github.com/aurora-platform/core" class="header__nav-link" target="_blank" rel="noopener noreferrer">
+          <svg class="header__nav-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clip-rule="evenodd"/>
+          </svg>
+          GitHub
+        </a>
+        <a href="https://status.aurora-platform.com" class="header__nav-link" target="_blank" rel="noopener noreferrer">
+          <svg class="header__nav-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd"/>
+          </svg>
+          Status
+        </a>
+        <!-- Locale switcher will be implemented as an island later -->
+        <div class="header__locale">
+          <slot name="locale-switcher" />
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero content -->
+    <div class="header__hero">
+      <div class="header__hero-content">
+        <div class="header__hero-text">
+          <h1 class="header__title">{translations.page.title}</h1>
+          <p class="header__subtitle">{translations.page.subtitle}</p>
+          <p class="header__description">
+            Stay up to date with the latest features, improvements, and fixes for Aurora Platform.
+            Our release notes provide detailed information about each update to help you make the most of our platform.
+          </p>
+        </div>
+
+        <div class="header__stats">
+          <div class="header__stat">
+            <div class="header__stat-number">50+</div>
+            <div class="header__stat-label">Releases</div>
+          </div>
+          <div class="header__stat">
+            <div class="header__stat-number">2.1K</div>
+            <div class="header__stat-label">GitHub Stars</div>
+          </div>
+          <div class="header__stat">
+            <div class="header__stat-number">99.9%</div>
+            <div class="header__stat-label">Uptime</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="header__hero-visual">
+        <div class="header__visual-card glass">
+          <div class="header__visual-content">
+            <div class="header__visual-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2L2 7V10C2 16 6 20.5 12 22C18 20.5 22 16 22 10V7L12 2Z"/>
+              </svg>
+            </div>
+            <h3 class="header__visual-title">Always Improving</h3>
+            <p class="header__visual-text">
+              Continuous updates and improvements to deliver the best experience.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ambient background gradients -->
+  <div class="header__gradient" aria-hidden="true"></div>
+  <div class="header__gradient-secondary" aria-hidden="true"></div>
+</header>
+
+<style>
+  .header {
+    position: relative;
+    padding: var(--spacing-lg) 0 var(--spacing-2xl);
+    overflow: hidden;
+    background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  }
+
+  .header__container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 var(--gutter-desktop);
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Navigation Bar */
+  .header__nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  .header__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+  }
+
+  .header__logo {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    text-decoration: none;
+    color: var(--text-primary);
+  }
+
+  .header__logo-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--accent-purple);
+  }
+
+  .header__logo-text {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-indigo));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header__version-badge {
+    padding: var(--spacing-xs) var(--spacing-md);
+    background: rgba(139, 92, 246, 0.2);
+    color: var(--accent-purple);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .header__nav-links {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+  }
+
+  .header__nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+  }
+
+  .header__nav-link:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .header__nav-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+    transition: opacity var(--transition-fast);
+  }
+
+  .header__nav-link:hover .header__nav-icon {
+    opacity: 1;
+  }
+
+  .header__locale {
+    margin-left: var(--spacing-md);
+    padding-left: var(--spacing-md);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Hero Section */
+  .header__hero {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--spacing-2xl);
+    align-items: center;
+  }
+
+  .header__hero-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2xl);
+  }
+
+  .header__hero-text {
+    flex: 1;
+  }
+
+  .header__title {
+    font-size: var(--font-size-4xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+    line-height: var(--line-height-tight);
+    background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header__subtitle {
+    font-size: var(--font-size-xl);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-lg);
+    line-height: var(--line-height-normal);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .header__description {
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+    max-width: 65ch;
+    margin: 0;
+  }
+
+  /* Stats */
+  .header__stats {
+    display: flex;
+    gap: var(--spacing-2xl);
+  }
+
+  .header__stat {
+    text-align: center;
+  }
+
+  .header__stat-number {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+    background: linear-gradient(135deg, var(--accent-emerald), var(--accent-purple));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header__stat-label {
+    font-size: var(--font-size-sm);
+    color: var(--text-tertiary);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Visual Card */
+  .header__hero-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .header__visual-card {
+    padding: var(--spacing-2xl);
+    border-radius: var(--radius-xl);
+    text-align: center;
+    max-width: 280px;
+    transition: all var(--transition-normal);
+  }
+
+  .header__visual-card:hover {
+    box-shadow:
+      var(--glass-shadow),
+      0 20px 40px rgba(139, 92, 246, 0.2);
+  }
+
+  .header__visual-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-lg);
+  }
+
+  .header__visual-icon {
+    width: 48px;
+    height: 48px;
+    padding: var(--spacing-md);
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-indigo));
+    border-radius: var(--radius-lg);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .header__visual-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .header__visual-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .header__visual-text {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+    margin: 0;
+  }
+
+  /* Background Gradients */
+  .header__gradient {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 120%;
+    height: 100%;
+    background: var(--gradient-ambient);
+    transform: translateX(-50%);
+    opacity: 0.4;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .header__gradient-secondary {
+    position: absolute;
+    top: 20%;
+    right: -10%;
+    width: 60%;
+    height: 80%;
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgba(16, 185, 129, 0.15) 0%,
+      rgba(99, 102, 241, 0.1) 50%,
+      transparent 100%
+    );
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 1024px) {
+    .header__container {
+      padding: 0 var(--gutter-tablet);
+    }
+
+    .header__hero {
+      grid-template-columns: 1fr;
+      gap: var(--spacing-xl);
+      text-align: center;
+    }
+
+    .header__stats {
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .header {
+      padding: var(--spacing-md) 0 var(--spacing-xl);
+    }
+
+    .header__container {
+      padding: 0 var(--gutter-mobile);
+    }
+
+    .header__nav {
+      flex-direction: column;
+      gap: var(--spacing-lg);
+      align-items: flex-start;
+    }
+
+    .header__nav-links {
+      flex-wrap: wrap;
+      gap: var(--spacing-md);
+    }
+
+    .header__locale {
+      margin-left: 0;
+      padding-left: 0;
+      border-left: none;
+    }
+
+    .header__title {
+      font-size: var(--font-size-3xl);
+    }
+
+    .header__subtitle {
+      font-size: var(--font-size-lg);
+    }
+
+    .header__description {
+      font-size: var(--font-size-base);
+    }
+
+    .header__stats {
+      gap: var(--spacing-lg);
+    }
+
+    .header__visual-card {
+      max-width: 240px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .header__nav {
+      padding: var(--spacing-md) 0;
+    }
+
+    .header__brand {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-sm);
+    }
+
+    .header__nav-links {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .header__title {
+      font-size: var(--font-size-2xl);
+    }
+
+    .header__stats {
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+
+    .header__visual-card {
+      max-width: 200px;
+      padding: var(--spacing-xl);
+    }
+  }
+</style>
