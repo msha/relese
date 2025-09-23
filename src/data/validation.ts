@@ -2,14 +2,13 @@ import { z } from 'zod';
 
 export const ReleaseTypeSchema = z.enum(['initial', 'major', 'minor', 'patch', 'hotfix']);
 
+const ContentSchema = z.record(z.string(), z.array(z.string()));
+
 export const ReleaseSchema = z.object({
   version: z.string().min(1),
   date: z.string().datetime(),
   type: ReleaseTypeSchema,
-  highlights: z.array(z.string()),
-  features: z.array(z.string()),
-  improvements: z.array(z.string()),
-  bugfixes: z.array(z.string()),
+  content: ContentSchema,
 });
 
 export const ReleasesArraySchema = z.array(ReleaseSchema);

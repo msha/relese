@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Locale } from '../i18n/utils.js';
+import { getTranslations } from '../i18n/utils.js';
 
 interface Props {
   currentLocale: Locale;
@@ -7,7 +8,14 @@ interface Props {
 
 export default function ThemeLanguageSelector({ currentLocale }: Props) {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [locale, setLocale] = useState<Locale>(currentLocale);
+  const [locale, setLocale] = useState<Locale>(() => {
+    // Always initialize from localStorage first, fallback to 'en'
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('preferred-locale') as Locale;
+      return stored && ['en', 'fi'].includes(stored) ? stored : 'en';
+    }
+    return 'en';
+  });
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
@@ -29,12 +37,92 @@ export default function ThemeLanguageSelector({ currentLocale }: Props) {
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
-  const handleLocaleChange = (newLocale: Locale) => {
+  const handleLocaleChange = async (newLocale: Locale) => {
     setLocale(newLocale);
-    // Navigate to the new locale version of the current page
-    const currentPath = window.location.pathname;
-    const pathWithoutLocale = currentPath.replace(/^\/(en|fi)/, '') || '/';
-    window.location.href = `/${newLocale}${pathWithoutLocale}`;
+    // Store locale in localStorage for persistence
+    localStorage.setItem('preferred-locale', newLocale);
+
+    // Load new translations
+    const newTranslations = await getTranslations(newLocale);
+
+    // Update HTML lang attribute
+    document.documentElement.lang = newLocale;
+
+    // Update page title
+    const titleElement = document.querySelector('title');
+    if (titleElement) {
+      titleElement.textContent = newTranslations.page.title;
+    }
+
+    // Update meta description
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+      metaDesc.setAttribute('content', newTranslations.page.subtitle);
+    }
+
+    // Update Open Graph title
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) {
+      ogTitle.setAttribute('content', newTranslations.page.title);
+    }
+
+    // Update Open Graph description
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) {
+      ogDesc.setAttribute('content', newTranslations.page.subtitle);
+    }
+
+    // Update main heading
+    const mainHeading = document.querySelector('h1.main-card__page-title');
+    if (mainHeading) {
+      mainHeading.textContent = newTranslations.page.title;
+    }
+
+    // Update subtitle
+    const subtitle = document.querySelector('.main-card__subtitle');
+    if (subtitle) {
+      subtitle.textContent = newTranslations.page.subtitle;
+    }
+
+    // Update description
+    const description = document.querySelector('.main-card__description');
+    if (description) {
+      description.textContent = newTranslations.header.description;
+    }
+
+    // Update feature title
+    const featureTitle = document.querySelector('.main-card__feature-title');
+    if (featureTitle) {
+      featureTitle.textContent = newTranslations.header.featureTitle;
+    }
+
+    // Update feature description
+    const featureDesc = document.querySelector('.main-card__feature-desc');
+    if (featureDesc) {
+      featureDesc.textContent = newTranslations.header.featureDesc;
+    }
+
+    // Update stats labels
+    const releasesLabel = document.querySelector('.stat-card__label');
+    if (releasesLabel && releasesLabel.textContent === 'Releases') {
+      releasesLabel.textContent = newTranslations.header.stats.releases;
+    }
+
+    const starsLabel = document.querySelectorAll('.stat-card__label')[1];
+    if (starsLabel && starsLabel.textContent === 'GitHub Stars') {
+      starsLabel.textContent = newTranslations.header.stats.stars;
+    }
+
+    const uptimeLabel = document.querySelectorAll('.stat-card__label')[2];
+    if (uptimeLabel && uptimeLabel.textContent === 'Uptime') {
+      uptimeLabel.textContent = newTranslations.header.stats.uptime;
+    }
+
+    // Update navigation outline
+    const outlineTitle = document.querySelector('.sticky-outline__title');
+    if (outlineTitle) {
+      outlineTitle.textContent = newTranslations.navigation.outline;
+    }
   };
 
   return (

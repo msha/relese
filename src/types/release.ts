@@ -2,14 +2,15 @@ export type ReleaseType = 'initial' | 'major' | 'minor' | 'patch' | 'hotfix';
 
 export type DateRange = 'thisYear' | 'lastYear' | 'older';
 
+export interface ReleaseContentSections {
+  [sectionKey: string]: string[];
+}
+
 export interface Release {
   version: string;
   date: string; // ISO string
   type: ReleaseType;
-  highlights: string[];
-  features: string[];
-  improvements: string[];
-  bugfixes: string[];
+  content: ReleaseContentSections;
 }
 
 export interface FilterState {
@@ -19,6 +20,6 @@ export interface FilterState {
 }
 
 export interface ReleaseSection {
-  id: 'highlights' | 'features' | 'improvements' | 'bugfixes';
+  id: string;
   items: string[];
 }

@@ -2,14 +2,22 @@
 import PageShell from '../layouts/PageShell.astro';
 import CurrentVersionHero from '../components/CurrentVersionHero.astro';
 import ReleaseCard from '../components/ReleaseCard.astro';
-import FilterPanel from '../islands/FilterPanel.tsx';
 import StickyOutline from '../islands/StickyOutline.tsx';
 import { getTranslations } from '../i18n/utils.js';
 import { loadReleases, getCurrentVersion, getUniqueVersions } from '../data/utils.js';
 import type { Locale } from '../types/index.js';
 
-// Get locale from URL or default to 'en'
-const locale: Locale = 'en'; // TODO: Implement locale detection from URL
+// Get locale from cookie or default to 'en'
+const cookies = Astro.request.headers.get('cookie') || '';
+const cookieMatch = cookies.match(/locale=([^;]+)/);
+const cookieLocale = cookieMatch ? cookieMatch[1] : null;
+
+let locale: Locale = 'en'; // default
+
+if (cookieLocale && ['en', 'fi'].includes(cookieLocale)) {
+  locale = cookieLocale as Locale;
+}
+
 
 // Load translations and data
 const translations = await getTranslations(locale);
@@ -30,18 +38,18 @@ const pageDescription = translations.page.subtitle;
   locale={locale}
   translations={translations}
 >
+  <!-- Sticky Outline Navigation (sidebar) -->
+  <nav class="outline-nav" aria-label={translations.navigation.outline}>
+    <StickyOutline
+      client:load
+      releases={releases}
+      translations={translations}
+      availableVersions={availableVersions}
+    />
+  </nav>
+
   <!-- Main Content Area -->
   <div class="content-area">
-    <!-- Filter Panel -->
-    <section class="filter-section" aria-label="Release filters">
-      <FilterPanel
-        client:idle
-        availableVersions={availableVersions}
-        translations={translations}
-        isLoading={false}
-      />
-    </section>
-
     <!-- Current Version Hero -->
     {currentVersion && (
       <CurrentVersionHero
@@ -56,7 +64,6 @@ const pageDescription = translations.page.subtitle;
       <div class="releases-list" id="releases-list">
         {otherReleases.map((release, index) => (
           <ReleaseCard
-            key={release.version}
             release={release}
             translations={translations}
             locale={locale}
@@ -71,7 +78,7 @@ const pageDescription = translations.page.subtitle;
           <div class="empty-state__icon" aria-hidden="true">🔍</div>
           <h3 class="empty-state__title">{translations.states.empty}</h3>
           <p class="empty-state__description">
-            Try adjusting your filters to see more releases.
+            {translations.states.emptyDescription}
           </p>
           <button type="button" class="empty-state__action" id="clear-filters-empty">
             {translations.filters.clearAll}
@@ -80,43 +87,24 @@ const pageDescription = translations.page.subtitle;
       </div>
     </section>
   </div>
-
-  <!-- Sticky Outline Navigation (sidebar) -->
-  <nav class="outline-nav" aria-label={translations.navigation.outline}>
-    <StickyOutline
-      client:load
-      releases={releases}
-      translations={translations}
-    />
-  </nav>
 </PageShell>
 
 <style>
   .outline-nav {
-    grid-column: 2;
-    position: sticky;
+    position: absolute;
+    left: calc(-1 * var(--outline-width) - var(--spacing-2xl));
     top: var(--spacing-xl);
+    width: var(--outline-width);
     height: fit-content;
     z-index: var(--z-sticky);
-  }
-
-  @media (max-width: 1024px) {
-    .outline-nav {
-      position: relative;
-      top: auto;
-      z-index: auto;
-    }
+    pointer-events: auto;
   }
 
   .content-area {
-    grid-column: 1;
     position: relative;
     min-height: 100vh;
   }
 
-  .filter-section {
-    margin-bottom: var(--spacing-2xl);
-  }
 
   .releases-section {
     position: relative;
@@ -179,7 +167,6 @@ const pageDescription = translations.page.subtitle;
 
   .empty-state__action:hover {
     background: color-mix(in srgb, var(--accent-purple) 90%, white);
-    transform: translateY(-2px);
     box-shadow: 0 8px 16px rgba(139, 92, 246, 0.3);
   }
 
@@ -191,20 +178,16 @@ const pageDescription = translations.page.subtitle;
   /* Responsive Design */
   @media (max-width: 1024px) {
     .outline-nav {
-      grid-column: 1 / -1;
+      position: relative;
+      left: auto;
+      top: auto;
+      width: 100%;
+      max-width: 100%;
       margin-bottom: var(--spacing-xl);
-    }
-
-    .content-area {
-      grid-column: 1 / -1;
     }
   }
 
   @media (max-width: 768px) {
-    .filter-section {
-      margin-bottom: var(--spacing-xl);
-    }
-
     .empty-state {
       min-height: 300px;
       margin: var(--spacing-xl) 0;
@@ -254,13 +237,13 @@ const pageDescription = translations.page.subtitle;
     if (clearFiltersButton) {
       clearFiltersButton.addEventListener('click', () => {
         // Dispatch custom event to clear filters
-        const clearEvent = new CustomEvent('clearFilters');
-        document.dispatchEvent(clearEvent);
+        const clearEvent = new CustomEvent('clearFilters' as any);
+        document.dispatchEvent(clearEvent as any);
       });
     }
 
     // Listen for filter changes from FilterPanel
-    document.addEventListener('filtersChanged', (event: CustomEvent) => {
+    document.addEventListener('filtersChanged' as any, (event: any) => {
       const { hasResults } = event.detail;
       const emptyState = document.getElementById('empty-state');
       const releasesList = document.getElementById('releases-list');
@@ -277,7 +260,7 @@ const pageDescription = translations.page.subtitle;
     });
 
     // Listen for loading state changes
-    document.addEventListener('loadingChanged', (event: CustomEvent) => {
+    document.addEventListener('loadingChanged' as any, (event: any) => {
       const { isLoading } = event.detail;
       const releasesList = document.getElementById('releases-list');
 
@@ -289,5 +272,41 @@ const pageDescription = translations.page.subtitle;
         }
       }
     });
+
+    // Compute container left for sticky alignment and handle sticky behavior
+    const getContainerLeft = () => {
+      const container = document.querySelector('.main__container');
+      if (!container) return 0;
+      const rect = (container as HTMLElement).getBoundingClientRect();
+      return rect.left + window.scrollX;
+    };
+
+    const setContainerLeftVar = () => {
+      if (window.innerWidth < 1024) return;
+      const leftPx = getContainerLeft();
+      document.documentElement.style.setProperty('--container-left', leftPx + 'px');
+    };
+
+    const handleStickyOutline = () => {
+      const outline = document.querySelector('.sticky-outline--desktop');
+      const heroSection = document.querySelector('.content-area section:first-child');
+
+      if (outline && heroSection && window.innerWidth >= 1024) {
+        const heroBottom = (heroSection as HTMLElement).getBoundingClientRect().bottom;
+        const shouldBeSticky = heroBottom <= parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spacing-xl')) || heroBottom <= 32;
+
+        if (shouldBeSticky) {
+          (outline as HTMLElement).classList.add('sticky-outline--sticky');
+        } else {
+          (outline as HTMLElement).classList.remove('sticky-outline--sticky');
+        }
+      }
+    };
+
+    // Initial check and scroll listener
+    setContainerLeftVar();
+    handleStickyOutline();
+    window.addEventListener('scroll', () => { setContainerLeftVar(); handleStickyOutline(); });
+    window.addEventListener('resize', () => { setContainerLeftVar(); handleStickyOutline(); });
   });
 </script>

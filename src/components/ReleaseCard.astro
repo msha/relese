@@ -3,6 +3,7 @@ import type { Release, Translations, Locale } from '../types/index.js';
 import { formatDate } from '../i18n/utils.js';
 import { generateReleaseId, generateSectionId } from '../data/utils.js';
 import ReleaseSection from './ReleaseSection.astro';
+import { getNestedTranslation } from '../i18n/utils.js';
 
 export interface Props {
   release: Release;
@@ -37,36 +38,32 @@ const getTypeColor = (type: string) => {
 
 const typeColor = getTypeColor(release.type);
 
-// Sections to display (only if they have content)
-const sections = [
-  {
-    id: 'highlights' as const,
-    title: translations.sections.highlights,
-    items: release.highlights,
-    gradient: 'var(--gradient-text-highlights)',
-  },
-  {
-    id: 'features' as const,
-    title: translations.sections.features,
-    items: release.features,
-    gradient: 'var(--gradient-text-features)',
-  },
-  {
-    id: 'improvements' as const,
-    title: translations.sections.improvements,
-    items: release.improvements,
-    gradient: 'var(--gradient-text-improvements)',
-  },
-  {
-    id: 'bugfixes' as const,
-    title: translations.sections.bugfixes,
-    items: release.bugfixes,
-    gradient: 'var(--gradient-text-bugfixes)',
-  },
-].filter(section => section.items.length > 0);
+// Helpers for dynamic sections
+const humanize = (key: string) => key.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+const getSectionTitle = (key: string) => {
+  const t = getNestedTranslation(translations, `sections.${key}`);
+  return t === `sections.${key}` ? humanize(key) : t;
+};
+const getGradient = (key: string) => {
+  if (key.includes('highlights')) return 'var(--gradient-text-highlights)';
+  if (key.includes('features')) return 'var(--gradient-text-features)';
+  if (key.includes('improvements')) return 'var(--gradient-text-improvements)';
+  if (key.includes('bugfixes')) return 'var(--gradient-text-bugfixes)';
+  return 'var(--gradient-text-features)';
+};
+
+// Build sections dynamically from content
+const sections = Object.entries(release.content)
+  .map(([key, items]) => ({
+    id: key,
+    title: getSectionTitle(key),
+    items: items,
+    gradient: getGradient(key),
+  }))
+  .filter(section => Array.isArray(section.items) && section.items.length > 0);
 ---
 
-<article class="release-card glass" id={releaseId} data-release={release.version} data-alternating={isAlternating}>
+<article class="release-card glass" id={releaseId} data-release={release.version} data-alternating={isAlternating} data-release-version={release.version} data-release-type={release.type} data-release-date={release.date}>
   <header class="release-card__header">
     <div class="release-card__meta">
       <h2 class="release-card__version">
@@ -89,7 +86,6 @@ const sections = [
     <div class="release-card__content">
       {sections.map((section) => (
         <ReleaseSection
-          key={section.id}
           id={generateSectionId(release.version, section.id)}
           title={section.title}
           items={section.items}
@@ -117,15 +113,6 @@ const sections = [
       0 8px 32px rgba(0, 0, 0, 0.25),
       inset 0 1px 0 rgba(255, 255, 255, 0.08);
     transition: all var(--transition-normal);
-  }
-
-  .release-card:hover {
-    background: rgba(25, 27, 43, 0.9);
-    border-color: rgba(255, 255, 255, 0.18);
-    box-shadow:
-      0 16px 48px rgba(0, 0, 0, 0.35),
-      0 0 0 1px rgba(139, 92, 246, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
 
   .release-card__header {
@@ -282,10 +269,6 @@ const sections = [
   @media (prefers-reduced-motion: reduce) {
     .release-card {
       transition: none;
-    }
-
-    .release-card:hover {
-      transform: none;
     }
   }
 

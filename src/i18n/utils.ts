@@ -41,6 +41,7 @@ export interface Translations {
     error: string;
     retry: string;
     empty: string;
+    emptyDescription: string;
     support: string;
   };
   currentVersion: {

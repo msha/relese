@@ -4,23 +4,61 @@ import { ReleasesArraySchema } from './validation.js';
 export async function loadReleases(): Promise<Release[]> {
   try {
     const response = await import('./releases.json');
-    const data = response.default;
+    const rawModule: unknown = response as unknown;
+    const rawData: unknown = (rawModule as any)?.default ?? rawModule;
 
-    // Validate the data
-    const validatedReleases = ReleasesArraySchema.parse(data);
+    // Try direct validation first (new format with content)
+    const direct = ReleasesArraySchema.safeParse(rawData);
+    if (direct.success) {
+      return sortReleases(direct.data);
+    }
 
-    // Sort by date (newest first) and then by semantic version
-    return validatedReleases.sort((a, b) => {
-      const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
-      if (dateCompare !== 0) return dateCompare;
-
-      // Secondary sort by version (semantic)
-      return compareVersions(b.version, a.version);
+    // Fallback: transform legacy format (top-level highlights/features/improvements/bugfixes) to content
+    const legacyArray = Array.isArray(rawData) ? rawData as any[] : [];
+    const transformed = legacyArray.map((item) => {
+      const { version, date, type } = item ?? {};
+      const content: Record<string, string[]> = {};
+      if (Array.isArray(item?.highlights)) content.highlights = item.highlights;
+      if (Array.isArray(item?.features)) content.features = item.features;
+      if (Array.isArray(item?.improvements)) content.improvements = item.improvements;
+      if (Array.isArray(item?.bugfixes)) content.bugfixes = item.bugfixes;
+      // Include any additional string[] fields under content if present
+      for (const [key, value] of Object.entries(item ?? {})) {
+        if (['version', 'date', 'type', 'highlights', 'features', 'improvements', 'bugfixes', 'content'].includes(key)) continue;
+        if (Array.isArray(value) && value.every((v) => typeof v === 'string')) {
+          content[key] = value as string[];
+        }
+      }
+      // Prefer existing content if provided
+      const finalContent = typeof item?.content === 'object' && item?.content !== null
+        ? item.content
+        : content;
+      return { version, date, type, content: finalContent };
     });
+
+    const transformedResult = ReleasesArraySchema.safeParse(transformed);
+    if (transformedResult.success) {
+      return sortReleases(transformedResult.data);
+    }
+
+    // If still failing, throw detailed error
+    const issues = JSON.stringify(direct.error?.issues ?? transformedResult.error?.issues ?? [], null, 2);
+    throw new Error(`Release data validation failed. Issues: ${issues}`);
   } catch (error) {
     console.error('Failed to load releases:', error);
     throw new Error('Failed to load release data');
   }
+}
+
+function sortReleases(releases: Release[]): Release[] {
+  // Sort by date (newest first) and then by semantic version
+  return releases.sort((a, b) => {
+    const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (dateCompare !== 0) return dateCompare;
+
+    // Secondary sort by version (semantic)
+    return compareVersions(b.version, a.version);
+  });
 }
 
 export function filterReleases(releases: Release[], filters: FilterState): Release[] {

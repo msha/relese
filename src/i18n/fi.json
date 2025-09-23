@@ -34,10 +34,21 @@
     "error": "Julkaisuhistorian lataus epäonnistui",
     "retry": "Yritä uudelleen",
     "empty": "Mikään julkaisu ei vastaa suodattimiasi",
+    "emptyDescription": "Kokeile säätää suodattimiasi nähdäksesi enemmän julkaisuja.",
     "support": "Tarvitsetko apua? Ota yhteyttä tukeen"
   },
   "currentVersion": {
     "latest": "Uusin julkaisu",
     "releasedOn": "Julkaistu"
+  },
+  "header": {
+    "description": "Pysy ajan tasalla uusimpien ominaisuuksien, parannusten ja korjausten kanssa Nite Notesissa.",
+    "featureTitle": "Aina kehittyvä",
+    "featureDesc": "Jatkuvat päivitykset ja parannukset parhaan käyttökokemuksen tarjoamiseksi.",
+    "stats": {
+      "releases": "Julkaisut",
+      "stars": "GitHub-tähdet",
+      "uptime": "Käyttöaika"
+    }
   }
 }

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Release } from '../types/release';
+import type { Release, FilterState, ReleaseType, DateRange } from '../types/release';
 import type { Translations } from '../i18n/utils';
+import { getNestedTranslation } from '../i18n/utils';
 
 // Types for navigation structure
 export interface NavigationSection {
-  id: 'highlights' | 'features' | 'improvements' | 'bugfixes';
+  id: string;
   title: string;
   anchor: string;
 }
@@ -18,7 +19,9 @@ export interface NavigationRelease {
 export interface StickyOutlineProps {
   releases: Release[];
   translations: Translations;
+  availableVersions: string[];
   onNavigate?: (anchor: string, releaseVersion?: string, sectionId?: string) => void;
+  onFiltersChange?: (filters: FilterState) => void;
 }
 
 interface ScrollState {
@@ -27,6 +30,9 @@ interface ScrollState {
   passedReleases: Set<string>;
   passedSections: Set<string>;
 }
+
+const RELEASE_TYPES: ReleaseType[] = ['initial', 'major', 'minor', 'patch', 'hotfix'];
+const DATE_RANGES: DateRange[] = ['thisYear', 'lastYear', 'older'];
 
 // Custom hook for intersection observer with performance optimizations
 function useIntersectionObserver(
@@ -39,8 +45,10 @@ function useIntersectionObserver(
   const observe = useCallback((element: Element) => {
     if (!observerRef.current) {
       observerRef.current = new IntersectionObserver(callback, {
-        rootMargin: '-20% 0px -20% 0px',
-        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+        // Narrower active window to reduce rapid toggling near boundaries
+        rootMargin: '-35% 0px -55% 0px',
+        // Single threshold to avoid repeated callbacks while ratio changes
+        threshold: 0,
         ...options,
       });
     }
@@ -89,9 +97,12 @@ function useScrollTracking(releases: NavigationRelease[]) {
     }
 
     updateTimeoutRef.current = requestAnimationFrame(() => {
+      // Preserve previous values when incoming fields are null/undefined
       setScrollState(prev => ({
-        ...prev,
-        ...newState,
+        activeRelease: (newState.activeRelease ?? prev.activeRelease) as string | null,
+        activeSection: (newState.activeSection ?? prev.activeSection) as string | null,
+        passedReleases: (newState.passedReleases ?? prev.passedReleases) as Set<string>,
+        passedSections: (newState.passedSections ?? prev.passedSections) as Set<string>,
       }));
     });
   }, []);
@@ -103,6 +114,9 @@ function useScrollTracking(releases: NavigationRelease[]) {
 
     let newActiveRelease: string | null = null;
     let newActiveSection: string | null = null;
+    // Track best (smallest) top position in viewport for active selection
+    let bestReleaseTop = Number.POSITIVE_INFINITY;
+    let bestSectionTop = Number.POSITIVE_INFINITY;
     const newPassedReleases = new Set<string>();
     const newPassedSections = new Set<string>();
 
@@ -133,14 +147,16 @@ function useScrollTracking(releases: NavigationRelease[]) {
       if (entry.isIntersecting && elementTop <= centerY && elementBottom > viewportTop) {
         if (entry.target.hasAttribute('data-release')) {
           const releaseVersion = entry.target.getAttribute('data-release')!;
-          // Prioritize the release that's highest in the viewport
-          if (!newActiveRelease || elementTop < getElementTop(newActiveRelease)) {
+          // Prioritize the release that's highest in the viewport (smallest top)
+          if (elementTop < bestReleaseTop) {
+            bestReleaseTop = elementTop;
             newActiveRelease = releaseVersion;
           }
         } else if (entry.target.hasAttribute('data-section')) {
           const sectionId = entry.target.getAttribute('data-section')!;
-          // Prioritize the section that's highest in the viewport
-          if (!newActiveSection || elementTop < getElementTop(newActiveSection)) {
+          // Prioritize the section that's highest in the viewport (smallest top)
+          if (elementTop < bestSectionTop) {
+            bestSectionTop = elementTop;
             newActiveSection = sectionId;
           }
         }
@@ -195,29 +211,214 @@ function useScrollTracking(releases: NavigationRelease[]) {
   return scrollState;
 }
 
-export default function StickyOutline({ releases, translations, onNavigate }: StickyOutlineProps) {
+function humanize(key: string): string {
+  return key.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export default function StickyOutline({ releases, translations, availableVersions, onNavigate, onFiltersChange }: StickyOutlineProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({});
 
   // Convert releases to navigation structure
-  const navigationReleases: NavigationRelease[] = releases.map(release => ({
-    version: release.version,
-    anchor: `release-${release.version.replace(/\./g, '-')}`,
-    sections: [
-      { id: 'highlights' as const, title: translations.sections.highlights, anchor: `release-${release.version.replace(/\./g, '-')}-highlights` },
-      { id: 'features' as const, title: translations.sections.features, anchor: `release-${release.version.replace(/\./g, '-')}-features` },
-      { id: 'improvements' as const, title: translations.sections.improvements, anchor: `release-${release.version.replace(/\./g, '-')}-improvements` },
-      { id: 'bugfixes' as const, title: translations.sections.bugfixes, anchor: `release-${release.version.replace(/\./g, '-')}-bugfixes` }
-    ].filter(section => {
-      // Only include sections that have content
-      const key: keyof Pick<Release, 'highlights' | 'features' | 'improvements' | 'bugfixes'> = section.id;
-      const sectionData = release[key];
-      return Array.isArray(sectionData) && sectionData.length > 0;
-    })
-  }));
+  const navigationReleases: NavigationRelease[] = releases.map(release => {
+    const sections: NavigationSection[] = Object.keys(release.content)
+      .map((key) => {
+        const t = getNestedTranslation(translations, `sections.${key}`);
+        const title = t === `sections.${key}` ? humanize(key) : t;
+        return {
+          id: key,
+          title,
+          anchor: `release-${release.version.replace(/\./g, '-')}-${key}`
+        };
+      })
+      .filter(section => Array.isArray(release.content[section.id]) && release.content[section.id].length > 0);
+
+    return {
+      version: release.version,
+      anchor: `release-${release.version.replace(/\./g, '-')}`,
+      sections
+    };
+  });
 
   const scrollState = useScrollTracking(navigationReleases);
+
+  // Filter handling functions
+  const handleFilterChange = useCallback((key: keyof FilterState, value: string | undefined) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value || undefined
+    }));
+  }, []);
+
+  const clearAllFilters = useCallback(() => {
+    setFilters({});
+  }, []);
+
+  const hasActiveFilters = Object.values(filters).some(value => value !== undefined);
+
+  // Sync URL params with filter state and apply filtering
+  useEffect(() => {
+    const updateURL = () => {
+      const url = new URL(window.location.href);
+      const params = new URLSearchParams(url.search);
+
+      // Clear existing filter params
+      params.delete('version');
+      params.delete('type');
+      params.delete('date');
+
+      // Add current filter params
+      if (filters.version) {
+        params.set('version', filters.version);
+      }
+      if (filters.type) {
+        params.set('type', filters.type);
+      }
+      if (filters.dateRange) {
+        params.set('date', filters.dateRange);
+      }
+
+      // Update URL without page reload
+      const newUrl = `${url.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+      window.history.replaceState({}, '', newUrl);
+    };
+
+    const applyFilters = () => {
+      // Ensure DOM is ready by waiting for release cards to exist
+      const checkAndApplyFilters = () => {
+        const releaseCards = document.querySelectorAll('[data-release-version]');
+
+        // If no cards found yet, wait a bit more
+        if (releaseCards.length === 0) {
+          setTimeout(checkAndApplyFilters, 100);
+          return;
+        }
+
+        let visibleCount = 0;
+
+        releaseCards.forEach((card) => {
+          const cardElement = card as HTMLElement;
+          const version = cardElement.dataset.releaseVersion;
+          const type = cardElement.dataset.releaseType as ReleaseType;
+          const dateStr = cardElement.dataset.releaseDate;
+
+          let shouldShow = true;
+
+          // Version filter
+          if (filters.version && version !== filters.version) {
+            shouldShow = false;
+          }
+
+          // Type filter
+          if (filters.type && type !== filters.type) {
+            shouldShow = false;
+          }
+
+          // Date filter
+          if (filters.dateRange && dateStr) {
+            const releaseDate = new Date(dateStr);
+            const currentYear = new Date().getFullYear();
+            const releaseYear = releaseDate.getFullYear();
+
+            switch (filters.dateRange) {
+              case 'thisYear':
+                if (releaseYear !== currentYear) shouldShow = false;
+                break;
+              case 'lastYear':
+                if (releaseYear !== currentYear - 1) shouldShow = false;
+                break;
+              case 'older':
+                if (releaseYear >= currentYear - 1) shouldShow = false;
+                break;
+            }
+          }
+
+          if (shouldShow) {
+            cardElement.style.display = '';
+            visibleCount++;
+          } else {
+            cardElement.style.display = 'none';
+          }
+        });
+
+        // Dispatch filter change event
+        const event = new CustomEvent('filtersChanged', {
+          detail: { hasResults: visibleCount > 0, visibleCount }
+        });
+        document.dispatchEvent(event);
+      };
+
+      // Start checking immediately
+      checkAndApplyFilters();
+    };
+
+    updateURL();
+    applyFilters();
+    onFiltersChange?.(filters);
+  }, [filters, onFiltersChange]);
+
+  // Read URL params on mount and apply initial filtering
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams(url.search);
+
+    const urlFilters: FilterState = {};
+
+    const version = params.get('version');
+    const type = params.get('type') as ReleaseType;
+    const date = params.get('date') as DateRange;
+
+    if (version && availableVersions.includes(version)) {
+      urlFilters.version = version;
+    }
+    if (type && RELEASE_TYPES.includes(type)) {
+      urlFilters.type = type;
+    }
+    if (date && DATE_RANGES.includes(date)) {
+      urlFilters.dateRange = date;
+    }
+
+    if (Object.keys(urlFilters).length > 0) {
+      setFilters(prev => ({ ...prev, ...urlFilters }));
+    } else {
+      // Apply default filtering (show all) on mount
+      const showAllCards = () => {
+        const releaseCards = document.querySelectorAll('[data-release-version]');
+        if (releaseCards.length === 0) {
+          setTimeout(showAllCards, 100);
+          return;
+        }
+
+        releaseCards.forEach((card) => {
+          const cardElement = card as HTMLElement;
+          cardElement.style.display = '';
+        });
+
+        const event = new CustomEvent('filtersChanged', {
+          detail: { hasResults: releaseCards.length > 0, visibleCount: releaseCards.length }
+        });
+        document.dispatchEvent(event);
+      };
+
+      showAllCards();
+    }
+  }, [availableVersions]);
+
+  // Handle clear filters event
+  useEffect(() => {
+    const handleClearFilters = () => {
+      setFilters({});
+    };
+
+    document.addEventListener('clearFilters', handleClearFilters);
+    
+    return () => {
+      document.removeEventListener('clearFilters', handleClearFilters);
+    };
+  }, []);
 
   // Handle responsive breakpoints
   useEffect(() => {
@@ -254,29 +455,126 @@ export default function StickyOutline({ releases, translations, onNavigate }: St
     }
   }, [handleNavigation]);
 
+  // Inline filter section component
+  const renderInlineFilters = () => {
+    if (!isFiltersExpanded) return null;
+
+    return (
+      <div className="sticky-outline__filters">
+        {/* Version Filter */}
+        <div className="filter-group">
+          <label htmlFor="version-select" className="filter-label">
+            {translations.filters.version}
+          </label>
+          <select
+            id="version-select"
+            className="filter-select"
+            value={filters.version || ''}
+            onChange={(e) => handleFilterChange('version', e.target.value || undefined)}
+          >
+            <option value="">{translations.filters.version}</option>
+            {availableVersions.map(version => (
+              <option key={version} value={version}>
+                {version}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Date Range Filter */}
+        <div className="filter-group">
+          <label htmlFor="date-select" className="filter-label">
+            {translations.filters.dateRange}
+          </label>
+          <select
+            id="date-select"
+            className="filter-select"
+            value={filters.dateRange || ''}
+            onChange={(e) => handleFilterChange('dateRange', e.target.value || undefined)}
+          >
+            <option value="">{translations.filters.dateRange}</option>
+            {DATE_RANGES.map(range => (
+              <option key={range} value={range}>
+                {translations.filters[range]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Release Type Filter */}
+        <div className="filter-group">
+          <label htmlFor="type-select" className="filter-label">
+            {translations.filters.type}
+          </label>
+          <select
+            id="type-select"
+            className="filter-select"
+            value={filters.type || ''}
+            onChange={(e) => handleFilterChange('type', e.target.value || undefined)}
+          >
+            <option value="">{translations.filters.type}</option>
+            {RELEASE_TYPES.map(type => (
+              <option key={type} value={type}>
+                {translations.releaseTypes[type]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Clear All Button */}
+        <div className="filter-group">
+          <button
+            type="button"
+            className="filter-clear-btn"
+            onClick={clearAllFilters}
+            disabled={!hasActiveFilters}
+          >
+            {translations.filters.clearAll}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // Mobile chip layout
   if (isMobile) {
     return (
-      <div className="sticky-outline sticky-outline--mobile" role="navigation" aria-label={translations.navigation.outline}>
-        <div className="sticky-outline__header">
-          <h2 className="sticky-outline__title">{translations.navigation.outline}</h2>
-          <button
-            type="button"
-            className="sticky-outline__toggle"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            aria-expanded={!isCollapsed}
-            aria-controls="outline-content"
-          >
-            <svg
-              className={`sticky-outline__toggle-icon ${isCollapsed ? 'sticky-outline__toggle-icon--collapsed' : ''}`}
-              viewBox="0 0 16 16"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path fillRule="evenodd" d="M4.646 9.646a.5.5 0 0 1 .708 0L8 12.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z"/>
-            </svg>
-          </button>
-        </div>
+      <>
+        <div className="sticky-outline sticky-outline--mobile" role="navigation" aria-label={translations.navigation.outline}>
+          <div className="sticky-outline__header">
+            <h2 className="sticky-outline__title">{translations.navigation.outline}</h2>
+            <div className="sticky-outline__actions">
+              <button
+                type="button"
+                className="sticky-outline__filters-btn"
+                onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                aria-expanded={isFiltersExpanded}
+                aria-label="Toggle filters"
+              >
+                <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                  <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+                </svg>
+                Filters
+                {hasActiveFilters && <span className="filter-badge">{Object.values(filters).filter(v => v).length}</span>}
+              </button>
+              <button
+                type="button"
+                className="sticky-outline__toggle"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                aria-expanded={!isCollapsed}
+                aria-controls="outline-content"
+              >
+                <svg
+                  className={`sticky-outline__toggle-icon ${isCollapsed ? 'sticky-outline__toggle-icon--collapsed' : ''}`}
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path fillRule="evenodd" d="M4.646 9.646a.5.5 0 0 1 .708 0L8 12.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
 
         {!isCollapsed && (
           <div id="outline-content" className="sticky-outline__content sticky-outline__content--mobile">
@@ -302,17 +600,35 @@ export default function StickyOutline({ releases, translations, onNavigate }: St
             </div>
           </div>
         )}
-      </div>
+
+        {/* Inline Filters Section */}
+        {renderInlineFilters()}
+        </div>
+      </>
     );
   }
 
   // Tablet stacked layout
   if (isTablet) {
     return (
-      <div className="sticky-outline sticky-outline--tablet" role="navigation" aria-label={translations.navigation.outline}>
-        <div className="sticky-outline__header">
-          <h2 className="sticky-outline__title">{translations.navigation.outline}</h2>
-        </div>
+      <>
+        <div className="sticky-outline sticky-outline--tablet" role="navigation" aria-label={translations.navigation.outline}>
+          <div className="sticky-outline__header">
+            <h2 className="sticky-outline__title">{translations.navigation.outline}</h2>
+            <button
+              type="button"
+              className="sticky-outline__filters-btn"
+              onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+              aria-expanded={isFiltersExpanded}
+              aria-label="Toggle filters"
+            >
+              <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+              </svg>
+              Filters
+              {hasActiveFilters && <span className="filter-badge">{Object.values(filters).filter(v => v).length}</span>}
+            </button>
+          </div>
 
         <div className="sticky-outline__content sticky-outline__content--tablet">
           <nav className="sticky-outline__nav">
@@ -358,16 +674,34 @@ export default function StickyOutline({ releases, translations, onNavigate }: St
             })}
           </nav>
         </div>
-      </div>
+
+        {/* Inline Filters Section */}
+        {renderInlineFilters()}
+        </div>
+      </>
     );
   }
 
   // Desktop sticky layout
   return (
-    <div className="sticky-outline sticky-outline--desktop glass" role="navigation" aria-label={translations.navigation.outline}>
-      <div className="sticky-outline__header">
-        <h2 className="sticky-outline__title">{translations.navigation.outline}</h2>
-      </div>
+    <>
+      <div className="sticky-outline sticky-outline--desktop glass" role="navigation" aria-label={translations.navigation.outline}>
+        <div className="sticky-outline__header">
+          <h2 className="sticky-outline__title">{translations.navigation.outline}</h2>
+          <button
+            type="button"
+            className="sticky-outline__filters-btn"
+            onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+            aria-expanded={isFiltersExpanded}
+            aria-label="Toggle filters"
+          >
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+            </svg>
+            Filters
+            {hasActiveFilters && <span className="filter-badge">{Object.values(filters).filter(v => v).length}</span>}
+          </button>
+        </div>
 
       <div className="sticky-outline__content">
         <nav className="sticky-outline__nav">
@@ -415,6 +749,10 @@ export default function StickyOutline({ releases, translations, onNavigate }: St
           })}
         </nav>
       </div>
-    </div>
+
+      {/* Inline Filters Section */}
+      {renderInlineFilters()}
+      </div>
+    </>
   );
 }

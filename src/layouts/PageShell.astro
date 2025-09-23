@@ -1,6 +1,7 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import Header from '../components/Header.astro';
+import ThemeLanguageSelector from '../islands/ThemeLanguageSelector.tsx';
 import type { Locale, Translations } from '../types/index.js';
 
 export interface Props {
@@ -19,6 +20,11 @@ const { title, description, locale, translations } = Astro.props;
       <slot name="locale-switcher" slot="locale-switcher" />
     </Header>
 
+    <!-- Fixed Theme/Language Selector -->
+    <div class="fixed-selector">
+      <ThemeLanguageSelector currentLocale={locale} client:load />
+    </div>
+
     <main id="main-content" class="main" role="main">
       <div class="main__container">
         <slot />
@@ -34,6 +40,17 @@ const { title, description, locale, translations } = Astro.props;
     flex-direction: column;
   }
 
+  .fixed-selector {
+    position: fixed;
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    z-index: 1000;
+  }
+
+  .fixed-selector * {
+    pointer-events: auto;
+  }
+
   .main {
     flex: 1;
     position: relative;
@@ -44,9 +61,23 @@ const { title, description, locale, translations } = Astro.props;
     margin: 0 auto;
     padding: 0 var(--gutter-desktop);
     display: grid;
-    grid-template-columns: 1fr var(--outline-width);
+    grid-template-columns: 1fr;
     gap: var(--spacing-2xl);
     align-items: start;
+    position: relative;
+  }
+
+  /* Desktop layout with outline space */
+  @media (min-width: 1024px) {
+    .main__container {
+      /* Reserve space for outline: outline-width + spacing-2xl = 352px */
+      width: calc(100vw - 352px);
+      /* Cap at a reasonable maximum for readability */
+      max-width: 1200px;
+      /* Position after outline space, centered when capped */
+      margin-left: calc(352px + max(0px, (100vw - 352px - 1200px) / 2));
+      margin-right: auto;
+    }
   }
 
   /* Responsive layout adjustments */
@@ -62,6 +93,33 @@ const { title, description, locale, translations } = Astro.props;
     .main__container {
       padding: 0 var(--gutter-mobile);
       gap: var(--spacing-lg);
+    }
+  }
+
+  /* Left margin outline positioning */
+  .main__container::before {
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--outline-width) - var(--spacing-2xl));
+    top: 0;
+    width: var(--outline-width);
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Hide left margin placeholder on tablet/mobile */
+  @media (max-width: 1024px) {
+    .main__container::before {
+      content: none;
+    }
+  }
+
+  /* Responsive fixed selector */
+  @media (max-width: 768px) {
+    .fixed-selector {
+      top: var(--spacing-md);
+      right: var(--spacing-md);
     }
   }
 </style>

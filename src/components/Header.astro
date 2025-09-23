@@ -1,6 +1,5 @@
 ---
 import type { Locale, Translations } from '../types/index.js';
-import ThemeLanguageSelector from '../islands/ThemeLanguageSelector.tsx';
 
 export interface Props {
   translations: Translations;
@@ -34,7 +33,7 @@ const { translations, locale } = Astro.props;
             <h1 class="main-card__page-title">{translations.page.title}</h1>
             <p class="main-card__subtitle">{translations.page.subtitle}</p>
             <p class="main-card__description">
-              Stay up to date with the latest features, improvements, and fixes for Nite Notes.
+              {translations.header.description}
             </p>
 
             <div class="main-card__feature">
@@ -44,41 +43,35 @@ const { translations, locale } = Astro.props;
                 </svg>
               </div>
               <div class="main-card__feature-text">
-                <h3 class="main-card__feature-title">Always Improving</h3>
-                <p class="main-card__feature-desc">Continuous updates and improvements to deliver the best experience.</p>
+                <h3 class="main-card__feature-title">{translations.header.featureTitle}</h3>
+                <p class="main-card__feature-desc">{translations.header.featureDesc}</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Controls Card (Theme + Language) -->
-      <div class="control-card control-card--controls">
-        <div class="control-card__content">
-          <ThemeLanguageSelector currentLocale={locale} client:load />
-        </div>
-      </div>
 
       <!-- Stats Row -->
       <div class="stats-row">
         <div class="control-card control-card--stat control-card--releases">
           <div class="control-card__content">
             <div class="stat-card__number">50+</div>
-            <div class="stat-card__label">Releases</div>
+            <div class="stat-card__label">{translations.header.stats.releases}</div>
           </div>
         </div>
 
         <div class="control-card control-card--stat control-card--stars">
           <div class="control-card__content">
             <div class="stat-card__number">2.1K</div>
-            <div class="stat-card__label">GitHub Stars</div>
+            <div class="stat-card__label">{translations.header.stats.stars}</div>
           </div>
         </div>
 
         <div class="control-card control-card--stat control-card--uptime">
           <div class="control-card__content">
             <div class="stat-card__number">99.9%</div>
-            <div class="stat-card__label">Uptime</div>
+            <div class="stat-card__label">{translations.header.stats.uptime}</div>
           </div>
         </div>
       </div>
@@ -104,13 +97,23 @@ const { translations, locale } = Astro.props;
     z-index: 2;
   }
 
+  /* Desktop header layout matching outline + content area */
+  @media (min-width: 1024px) {
+    .header__container {
+      width: calc(100vw - 352px);
+      max-width: 1200px;
+      margin-left: calc(352px + max(0px, (100vw - 352px - 1200px) / 2));
+      margin-right: auto;
+    }
+  }
+
   /* Apple Control Center Grid Layout */
   .header__control-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 1fr;
     grid-template-areas:
-      "main controls"
-      "stats stats";
+      "main"
+      "stats";
     gap: var(--spacing-lg);
     width: 100%;
   }
@@ -142,18 +145,6 @@ const { translations, locale } = Astro.props;
     transition: all var(--transition-normal);
   }
 
-  .control-card:hover {
-    background: linear-gradient(135deg,
-      rgba(30, 32, 48, 0.95) 0%,
-      rgba(25, 27, 43, 0.9) 50%,
-      rgba(35, 37, 53, 0.95) 100%);
-    border-color: rgba(255, 255, 255, 0.25);
-    box-shadow:
-      0 24px 60px rgba(0, 0, 0, 0.5),
-      0 12px 30px rgba(139, 92, 246, 0.2),
-      inset 0 2px 0 rgba(255, 255, 255, 0.15);
-  }
-
   .control-card__content {
     position: relative;
     z-index: 2;
@@ -164,7 +155,6 @@ const { translations, locale } = Astro.props;
 
   /* Grid Area Assignments */
   .control-card--main { grid-area: main; }
-  .control-card--controls { grid-area: controls; }
 
   /* Main Card (Brand + Description + Feature) */
   .control-card--main {
@@ -340,23 +330,6 @@ const { translations, locale } = Astro.props;
   }
 
 
-  /* Controls Card Styling */
-  .control-card--controls {
-    min-height: auto;
-    padding: var(--spacing-2xl);
-    width: auto;
-    height: fit-content;
-    justify-self: end;
-    background: linear-gradient(135deg,
-      rgba(99, 102, 241, 0.15) 0%,
-      rgba(25, 27, 43, 0.9) 30%,
-      rgba(30, 32, 48, 0.9) 100%);
-  }
-
-  .control-card--controls .control-card__content {
-    justify-content: flex-end;
-    align-items: flex-start;
-  }
 
 
   /* Responsive Design */
@@ -369,7 +342,6 @@ const { translations, locale } = Astro.props;
       grid-template-columns: 1fr;
       grid-template-areas:
         "main"
-        "controls"
         "stats";
     }
 
@@ -399,7 +371,6 @@ const { translations, locale } = Astro.props;
       grid-template-columns: 1fr;
       grid-template-areas:
         "main"
-        "controls"
         "stats";
       gap: var(--spacing-md);
     }
@@ -423,10 +394,6 @@ const { translations, locale } = Astro.props;
       min-height: 100px;
     }
 
-    .control-card--controls {
-      min-height: 50px;
-      padding: var(--spacing-sm);
-    }
 
     .main-card__page-title {
       font-size: var(--font-size-3xl);
