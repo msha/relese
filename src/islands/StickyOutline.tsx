@@ -14,6 +14,7 @@ export interface NavigationRelease {
   version: string;
   anchor: string;
   sections: NavigationSection[];
+  type: string;
 }
 
 export interface StickyOutlineProps {
@@ -215,6 +216,24 @@ function humanize(key: string): string {
   return key.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Get type-specific styling
+function getTypeColor(type: string): string {
+  switch (type) {
+    case 'major':
+      return '#ef4444'; // Red
+    case 'minor':
+      return '#8b5cf6'; // Purple
+    case 'patch':
+      return '#10b981'; // Emerald
+    case 'hotfix':
+      return '#f59e0b'; // Amber
+    case 'initial':
+      return '#6366f1'; // Indigo
+    default:
+      return '#8b5cf6';
+  }
+}
+
 export default function StickyOutline({ releases, translations, availableVersions, onNavigate, onFiltersChange }: StickyOutlineProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -239,11 +258,26 @@ export default function StickyOutline({ releases, translations, availableVersion
     return {
       version: release.version,
       anchor: `release-${release.version.replace(/\./g, '-')}`,
-      sections
+      sections,
+      type: release.type
     };
   });
 
   const scrollState = useScrollTracking(navigationReleases);
+
+  // Progressive hiding logic
+  const passedReleasesCount = scrollState.passedReleases.size;
+  const titlesToHide = Math.max(0, passedReleasesCount - 3);
+
+  // Get the oldest passed releases (in order) whose titles should be hidden
+  const passedReleasesArray = Array.from(scrollState.passedReleases);
+  const releasesToHideTitles = passedReleasesArray.slice(0, titlesToHide);
+
+  // Calculate hidden counts for indicators
+  const hiddenTitlesCount = titlesToHide; // How many titles are hidden in outline
+  const totalReleases = navigationReleases.length;
+  const releasesBelowViewport = totalReleases - passedReleasesCount; // Releases not yet passed (below current scroll position)
+  const unableToShowCount = releasesBelowViewport; // Releases unable to show due to outline height constraint
 
   // Filter handling functions
   const handleFilterChange = useCallback((key: keyof FilterState, value: string | undefined) => {
@@ -576,12 +610,31 @@ export default function StickyOutline({ releases, translations, availableVersion
             </div>
           </div>
 
+        {/* Inline Filters Section - placed directly under header on mobile */}
+        {renderInlineFilters()}
+
         {!isCollapsed && (
           <div id="outline-content" className="sticky-outline__content sticky-outline__content--mobile">
+            {/* Top indicator for hidden titles */}
+            {hiddenTitlesCount > 0 && (
+              <div className="sticky-outline__indicator sticky-outline__indicator--top">
+                <span className="sticky-outline__indicator-text">
+                  {hiddenTitlesCount} {hiddenTitlesCount === 1 ? 'title' : 'titles'} hidden above
+                </span>
+              </div>
+            )}
+
             <div className="sticky-outline__chips">
               {navigationReleases.map(release => {
                 const isActive = scrollState.activeRelease === release.version;
                 const isPassed = scrollState.passedReleases.has(release.version);
+
+                // Hide title for oldest passed releases
+                const shouldHideTitle = releasesToHideTitles.includes(release.version);
+
+                if (shouldHideTitle) {
+                  return null;
+                }
 
                 return (
                   <button
@@ -593,16 +646,30 @@ export default function StickyOutline({ releases, translations, availableVersion
                     aria-label={`Navigate to version ${release.version}`}
                     aria-current={isActive ? 'true' : undefined}
                   >
-                    {release.version}
+                    <span className="sticky-outline__chip-version">{release.version}</span>
+                    <span
+                      className="sticky-outline__chip-type-text"
+                      style={{ color: getTypeColor(release.type) } as React.CSSProperties}
+                    >
+                      {release.type}
+                    </span>
                   </button>
                 );
               })}
             </div>
+
+            {/* Bottom indicator for releases unable to show due to outline height */}
+            {unableToShowCount > 0 && (
+              <div className="sticky-outline__indicator sticky-outline__indicator--bottom">
+                <span className="sticky-outline__indicator-text">
+                  {unableToShowCount} {unableToShowCount === 1 ? 'release' : 'releases'} unable to show due to outline length
+                </span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Inline Filters Section */}
-        {renderInlineFilters()}
+        {/* Inline Filters Section duplicated at bottom removed; now under header */}
         </div>
       </>
     );
@@ -630,53 +697,86 @@ export default function StickyOutline({ releases, translations, availableVersion
             </button>
           </div>
 
+        {/* Inline Filters Section - placed directly under header on tablet */}
+        {renderInlineFilters()}
+
         <div className="sticky-outline__content sticky-outline__content--tablet">
+          {/* Top indicator for hidden titles */}
+          {hiddenTitlesCount > 0 && (
+            <div className="sticky-outline__indicator sticky-outline__indicator--top">
+              <span className="sticky-outline__indicator-text">
+                {hiddenTitlesCount} {hiddenTitlesCount === 1 ? 'title' : 'titles'} hidden above
+              </span>
+            </div>
+          )}
+
           <nav className="sticky-outline__nav">
             {navigationReleases.map(release => {
               const isActiveRelease = scrollState.activeRelease === release.version;
               const isPassedRelease = scrollState.passedReleases.has(release.version);
 
+              // Hide sections if release has passed, hide title for oldest passed releases
+              const shouldHideSections = isPassedRelease;
+              const shouldHideTitle = releasesToHideTitles.includes(release.version);
+
               return (
                 <div key={release.version} className="sticky-outline__release-group">
-                  <button
-                    type="button"
-                    className={`sticky-outline__release ${isActiveRelease ? 'sticky-outline__release--active' : ''} ${isPassedRelease ? 'sticky-outline__release--passed' : ''}`}
-                    onClick={() => handleNavigation(release.anchor, release.version)}
-                    onKeyDown={(e) => handleKeyDown(e, release.anchor, release.version)}
-                    aria-label={`Navigate to version ${release.version}`}
-                    aria-current={isActiveRelease ? 'true' : undefined}
-                  >
-                    {release.version}
-                  </button>
+                  {!shouldHideTitle && (
+                    <button
+                      type="button"
+                      className={`sticky-outline__release ${isActiveRelease ? 'sticky-outline__release--active' : ''} ${isPassedRelease ? 'sticky-outline__release--passed' : ''}`}
+                      onClick={() => handleNavigation(release.anchor, release.version)}
+                      onKeyDown={(e) => handleKeyDown(e, release.anchor, release.version)}
+                      aria-label={`Navigate to version ${release.version}`}
+                      aria-current={isActiveRelease ? 'true' : undefined}
+                    >
+                      <span className="sticky-outline__release-version">{release.version}</span>
+                      <span
+                        className="sticky-outline__release-type-text"
+                        style={{ color: getTypeColor(release.type) } as React.CSSProperties}
+                      >
+                        {release.type}
+                      </span>
+                    </button>
+                  )}
 
-                  <div className="sticky-outline__sections">
-                    {release.sections.map(section => {
-                      const isActiveSection = scrollState.activeSection === section.anchor;
-                      const isPassedSection = scrollState.passedSections.has(section.anchor);
+                  {release.sections.length > 0 && !shouldHideSections && (
+                    <div className="sticky-outline__sections">
+                      {release.sections.map(section => {
+                        const isActiveSection = scrollState.activeSection === section.anchor;
+                        const isPassedSection = scrollState.passedSections.has(section.anchor);
 
-                      return (
-                        <button
-                          key={section.anchor}
-                          type="button"
-                          className={`sticky-outline__section ${isActiveSection ? 'sticky-outline__section--active' : ''} ${isPassedSection ? 'sticky-outline__section--passed' : ''}`}
-                          onClick={() => handleNavigation(section.anchor, release.version, section.id)}
-                          onKeyDown={(e) => handleKeyDown(e, section.anchor, release.version, section.id)}
-                          aria-label={`Navigate to ${section.title} in version ${release.version}`}
-                          aria-current={isActiveSection ? 'true' : undefined}
-                        >
-                          {section.title}
-                        </button>
-                      );
-                    })}
-                  </div>
+                        return (
+                          <button
+                            key={section.anchor}
+                            type="button"
+                            className={`sticky-outline__section ${isActiveSection ? 'sticky-outline__section--active' : ''} ${isPassedSection ? 'sticky-outline__section--passed' : ''}`}
+                            onClick={() => handleNavigation(section.anchor, release.version, section.id)}
+                            onKeyDown={(e) => handleKeyDown(e, section.anchor, release.version, section.id)}
+                            aria-label={`Navigate to ${section.title} in version ${release.version}`}
+                            aria-current={isActiveSection ? 'true' : undefined}
+                          >
+                            {section.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </nav>
-        </div>
 
-        {/* Inline Filters Section */}
-        {renderInlineFilters()}
+          {/* Bottom indicator for releases unable to show due to outline height */}
+          {unableToShowCount > 0 && (
+            <div className="sticky-outline__indicator sticky-outline__indicator--bottom">
+              <span className="sticky-outline__indicator-text">
+                {unableToShowCount} {unableToShowCount === 1 ? 'release' : 'releases'} unable to show due to outline length
+              </span>
+            </div>
+          )}
+        </div>
+        {/* Inline Filters Section duplicated at bottom removed; now under header */}
         </div>
       </>
     );
@@ -703,26 +803,50 @@ export default function StickyOutline({ releases, translations, availableVersion
           </button>
         </div>
 
+      {/* Inline Filters Section - placed directly under header on desktop */}
+      {renderInlineFilters()}
+
       <div className="sticky-outline__content">
+        {/* Top indicator for hidden titles */}
+        {hiddenTitlesCount > 0 && (
+          <div className="sticky-outline__indicator sticky-outline__indicator--top">
+            <span className="sticky-outline__indicator-text">
+              {hiddenTitlesCount} {hiddenTitlesCount === 1 ? 'title' : 'titles'} hidden above
+            </span>
+          </div>
+        )}
+
         <nav className="sticky-outline__nav">
           {navigationReleases.map(release => {
             const isActiveRelease = scrollState.activeRelease === release.version;
             const isPassedRelease = scrollState.passedReleases.has(release.version);
 
+            // Hide sections if release has passed, hide title for oldest passed releases
+            const shouldHideSections = isPassedRelease;
+            const shouldHideTitle = releasesToHideTitles.includes(release.version);
+
             return (
               <div key={release.version} className="sticky-outline__release-group">
-                <button
-                  type="button"
-                  className={`sticky-outline__release ${isActiveRelease ? 'sticky-outline__release--active' : ''} ${isPassedRelease ? 'sticky-outline__release--passed' : ''}`}
-                  onClick={() => handleNavigation(release.anchor, release.version)}
-                  onKeyDown={(e) => handleKeyDown(e, release.anchor, release.version)}
-                  aria-label={`Navigate to version ${release.version}`}
-                  aria-current={isActiveRelease ? 'true' : undefined}
-                >
-                  <span className="sticky-outline__release-version">v{release.version}</span>
-                </button>
+                {!shouldHideTitle && (
+                  <button
+                    type="button"
+                    className={`sticky-outline__release ${isActiveRelease ? 'sticky-outline__release--active' : ''} ${isPassedRelease ? 'sticky-outline__release--passed' : ''}`}
+                    onClick={() => handleNavigation(release.anchor, release.version)}
+                    onKeyDown={(e) => handleKeyDown(e, release.anchor, release.version)}
+                    aria-label={`Navigate to version ${release.version}`}
+                    aria-current={isActiveRelease ? 'true' : undefined}
+                  >
+                    <span className="sticky-outline__release-version">v{release.version}</span>
+                    <span
+                      className="sticky-outline__release-type-text"
+                      style={{ color: getTypeColor(release.type) } as React.CSSProperties}
+                    >
+                      {release.type}
+                    </span>
+                  </button>
+                )}
 
-                {release.sections.length > 0 && (
+                {release.sections.length > 0 && !shouldHideSections && (
                   <div className="sticky-outline__sections">
                     {release.sections.map(section => {
                       const isActiveSection = scrollState.activeSection === section.anchor;
@@ -748,10 +872,17 @@ export default function StickyOutline({ releases, translations, availableVersion
             );
           })}
         </nav>
-      </div>
 
-      {/* Inline Filters Section */}
-      {renderInlineFilters()}
+        {/* Bottom indicator for releases unable to show due to outline height */}
+        {unableToShowCount > 0 && (
+          <div className="sticky-outline__indicator sticky-outline__indicator--bottom">
+            <span className="sticky-outline__indicator-text">
+              {unableToShowCount} {unableToShowCount === 1 ? 'release' : 'releases'} unable to show due to outline length
+            </span>
+          </div>
+        )}
+      </div>
+      {/* Inline Filters Section duplicated at bottom removed; now under header */}
       </div>
     </>
   );

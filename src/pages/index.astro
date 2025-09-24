@@ -292,8 +292,8 @@ const pageDescription = translations.page.subtitle;
       const heroSection = document.querySelector('.content-area section:first-child');
 
       if (outline && heroSection && window.innerWidth >= 1024) {
-        const heroBottom = (heroSection as HTMLElement).getBoundingClientRect().bottom;
-        const shouldBeSticky = heroBottom <= parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spacing-xl')) || heroBottom <= 32;
+        const heroTop = (heroSection as HTMLElement).getBoundingClientRect().top;
+        const shouldBeSticky = heroTop <= 0;
 
         if (shouldBeSticky) {
           (outline as HTMLElement).classList.add('sticky-outline--sticky');

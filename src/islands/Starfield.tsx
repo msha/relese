@@ -1,121 +1,198 @@
-import { useEffect, useRef } from 'react';
+import type { CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-interface Star {
-  x: number;
-  y: number;
-  radius: number;
-  baseAlpha: number;
-  twinkleAmplitude: number;
-  twinkleSpeed: number;
-  phase: number;
+function randomBetween(min: number, max: number): number {
+  return Math.random() * (max - min) + min;
+}
+
+function createStarStyle(): CSSProperties {
+  const isBright = Math.random() < 0.2;
+  const size = isBright ? randomBetween(1.2, 3.2) : randomBetween(0.4, 2.2);
+  const avoidStart = 38;
+  const avoidEnd = 62;
+  const left = (() => {
+    const pickLeftBand = Math.random() < ((avoidStart - 0) / 100);
+    if (pickLeftBand) return Math.random() * avoidStart;
+    return avoidEnd + Math.random() * (100 - avoidEnd);
+  })();
+  const top = Math.random() * 50;
+  const brightness = (Math.random() * 0.7 + 0.25).toFixed(2);
+  const twinkle = (Math.random() * 1.8 + 1.6).toFixed(2);
+  const delay = (-Math.random() * 2).toFixed(2);
+  return {
+    width: `${size}px`,
+    height: `${size}px`,
+    left: `${left}%`,
+    top: `${top}%`,
+    ['--star-brightness' as any]: brightness,
+    animationDuration: `${twinkle}s`,
+    animationDelay: `${delay}s`,
+  };
+}
+
+function createParticleStyle(): CSSProperties {
+  const size = Math.floor(Math.random() * 8) + 1;
+  const posX = Math.floor(Math.random() * 100);
+  const posY = Math.floor(Math.random() * 100);
+  const delay = Math.random() * 20;
+  const duration = Math.random() * 25 + 25;
+  const opacity = Math.random() * 0.55 + 0.05;
+  const blur = Math.random() * 2.5;
+  return {
+    width: `${size}px`,
+    height: `${size}px`,
+    left: `${posX}%`,
+    top: `${posY}%`,
+    opacity,
+    filter: `blur(${blur}px)`,
+    animationDelay: `${delay}s`,
+    animationDuration: `${duration}s`,
+    ['--random-angle' as any]: `${Math.floor(Math.random() * 360)}deg`,
+  };
+}
+
+function createOrbStyle(isLowPerformance: boolean): CSSProperties {
+  const size = Math.floor(Math.random() * 200) + 150;
+  const posX = Math.floor(Math.random() * 100);
+  const posY = Math.floor(Math.random() * 100);
+  const delay = Math.random() * 15;
+  const duration = Math.random() * 30 + 40;
+  const hue = Math.floor(Math.random() * 60) + 200;
+  const maxBlur = isLowPerformance ? 20 : 50;
+  const minBlur = isLowPerformance ? 5 : 30;
+  const blur = Math.floor(Math.random() * (maxBlur - minBlur)) + minBlur;
+  const opacity = isLowPerformance ? 0.15 : 0.25;
+  return {
+    width: `${size}px`,
+    height: `${size}px`,
+    left: `${posX}%`,
+    top: `${posY}%`,
+    filter: `blur(${blur}px)`,
+    background: `radial-gradient(circle, hsla(${hue}, 100%, 70%, ${opacity}), hsla(${hue}, 100%, 50%, 0.05))`,
+    animationDelay: `${delay}s`,
+    animationDuration: `${duration}s`,
+  };
+}
+
+function createBeamStyle(): CSSProperties {
+  const width = Math.floor(Math.random() * 200) + 100;
+  const height = Math.floor(Math.random() * 200) + 300; // Tall enough to extend beyond viewport even when rotated
+  const posX = Math.floor(Math.random() * 100);
+  const posY = -50; // Position top center well above viewport
+  const delay = Math.random() * 15;
+  const duration = Math.random() * 20 + 40;
+  const rotate = Math.floor(Math.random() * 90) - 45;
+
+  // Expanded color range: blues, cyans, purples, magentas, and some warmer tones
+  const hue = Math.floor(Math.random() * 120) + 180; // 180-300 degrees
+  const saturation = Math.floor(Math.random() * 30) + 70; // 70-100%
+  const lightness1 = Math.floor(Math.random() * 20) + 60; // 60-80%
+  const lightness2 = Math.floor(Math.random() * 30) + 30; // 30-60%
+
+  return {
+    width: `${width}px`,
+    height: `${height}vh`,
+    left: `${posX}%`,
+    top: `${posY}%`,
+    ['--rotate' as any]: `${rotate}deg`,
+    transform: `rotate(${rotate}deg)`,
+    background: `linear-gradient(to bottom,
+      hsla(${hue}, ${saturation}%, ${lightness1}%, 0.15) 0%,
+      hsla(${hue}, ${saturation}%, ${Math.max(lightness1 - 10, 40)}%, 0.12) 25%,
+      hsla(${hue}, ${saturation}%, ${lightness2}%, 0.08) 60%,
+      hsla(${hue}, ${Math.min(saturation + 20, 100)}%, ${Math.max(lightness2 - 20, 10)}%, 0.03) 85%,
+      hsla(${hue}, ${Math.min(saturation + 30, 100)}%, 5%, 0) 100%)`,
+    animationDelay: `${delay}s`,
+    animationDuration: `${duration}s`,
+  };
 }
 
 export default function Starfield() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const animationRef = useRef<number | null>(null);
+  const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const [isLowPerformance, setIsLowPerformance] = useState(prefersReducedMotion);
+  const [particleCount, setParticleCount] = useState<number>(25);
+  const [orbCount, setOrbCount] = useState<number>(6);
+  const [beamCount, setBeamCount] = useState<number>(3);
+  const starsCount = 140;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    const stars: Star[] = [];
-    let dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-
-    function resizeCanvas() {
-      const { innerWidth, innerHeight } = window;
-      canvas.style.width = innerWidth + 'px';
-      canvas.style.height = innerHeight + 'px';
-      dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-      canvas.width = Math.floor(innerWidth * dpr);
-      canvas.height = Math.floor(innerHeight * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      generateStars();
-      draw(0); // immediate draw after resize
-    }
-
-    function generateStars() {
-      stars.length = 0;
-      const width = canvas.width / dpr;
-      const height = canvas.height / dpr;
-
-      // Density-based star count for randomness at different resolutions
-      const density = 0.00035; // stars per pixel
-      const count = Math.max(150, Math.floor(width * height * density));
-
-      for (let i = 0; i < count; i++) {
-        const isBright = Math.random() < 0.08; // a few brighter stars
-        const radius = isBright ? 1.4 + Math.random() * 1.2 : 0.6 + Math.random() * 0.9;
-        const baseAlpha = isBright ? 0.55 + Math.random() * 0.3 : 0.25 + Math.random() * 0.35;
-        const twinkleAmplitude = isBright ? 0.25 + Math.random() * 0.2 : 0.12 + Math.random() * 0.12;
-        const twinkleSpeed = isBright ? 0.4 + Math.random() * 0.5 : 0.7 + Math.random() * 0.9; // radians/sec
-        const phase = Math.random() * Math.PI * 2;
-
-        stars.push({
-          x: Math.random() * width,
-          y: Math.random() * height,
-          radius,
-          baseAlpha,
-          twinkleAmplitude,
-          twinkleSpeed,
-          phase,
-        });
-      }
-    }
-
-    function draw(elapsedSeconds: number) {
-      const width = canvas.width / dpr;
-      const height = canvas.height / dpr;
-
-      ctx.clearRect(0, 0, width, height);
-
-      ctx.fillStyle = '#ffffff';
-      for (let i = 0; i < stars.length; i++) {
-        const s = stars[i];
-        const alpha = prefersReducedMotion
-          ? s.baseAlpha
-          : Math.max(0, Math.min(1, s.baseAlpha + s.twinkleAmplitude * Math.sin(s.phase + elapsedSeconds * s.twinkleSpeed)));
-
-        ctx.globalAlpha = alpha;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    let start: number | null = null;
-    function loop(ts: number) {
-      if (start === null) start = ts;
-      const elapsed = (ts - start) / 1000; // seconds
-      draw(elapsed);
-      animationRef.current = requestAnimationFrame(loop);
-    }
-
-    const handleResize = () => resizeCanvas();
-    window.addEventListener('resize', handleResize);
-    resizeCanvas();
-
-    if (!prefersReducedMotion) {
-      animationRef.current = requestAnimationFrame(loop);
-    }
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+  const starVarsStyle = useMemo<CSSProperties>(() => {
+    const rotOpacity1 = randomBetween(0.4, 0.65).toFixed(2);
+    const rotOpacity2 = randomBetween(0.4, 0.65).toFixed(2);
+    return {
+      ['--rot-stars-opacity-1' as any]: rotOpacity1,
+      ['--rot-stars-opacity-2' as any]: rotOpacity2,
     };
   }, []);
 
+  const starStyles = useMemo(() => Array.from({ length: starsCount }, () => createStarStyle()), [starsCount]);
+  const orbStyles = useMemo(() => Array.from({ length: orbCount }, () => createOrbStyle(isLowPerformance)), [orbCount, isLowPerformance]);
+  const beamStyles = useMemo(() => Array.from({ length: beamCount }, () => createBeamStyle()), [beamCount]);
+
+  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setIsLowPerformance(true);
+      setOrbCount(3);
+      setBeamCount(1);
+      return;
+    }
+
+    let frameCount = 0;
+    let lastTime = performance.now();
+    const fpsSamples: number[] = [];
+
+    const measure = () => {
+      const now = performance.now();
+      frameCount++;
+      if (now - lastTime >= 1000) {
+        const fps = Math.round((frameCount * 1000) / (now - lastTime));
+        fpsSamples.push(fps);
+        if (fpsSamples.length > 5) fpsSamples.shift();
+        const avg = fpsSamples.reduce((a, b) => a + b, 0) / fpsSamples.length;
+        if (avg < 30 && !isLowPerformance) {
+          setIsLowPerformance(true);
+          setParticleCount(10);
+          setOrbCount(3);
+          setBeamCount(1);
+        } else if (avg > 50 && isLowPerformance && fpsSamples.length >= 3) {
+          setIsLowPerformance(false);
+          setParticleCount(25);
+          setOrbCount(6);
+          setBeamCount(3);
+        }
+        frameCount = 0;
+        lastTime = now;
+      }
+      rafRef.current = requestAnimationFrame(measure);
+    };
+
+    const startId = requestAnimationFrame(() => {
+      rafRef.current = requestAnimationFrame(measure);
+    });
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(startId);
+    };
+  }, [isLowPerformance, prefersReducedMotion]);
+
   return (
-    <canvas
-      ref={canvasRef}
-      className="starfield-canvas"
-      aria-hidden="true"
-    />
+    <div className={`animated-background${isLowPerformance ? ' low-performance' : ''}`} style={starVarsStyle} aria-hidden="true">
+      <div className="starfield" aria-hidden="true">
+        {starStyles.map((style, idx) => (
+          <div key={`star-${idx}`} className="star" style={style} />
+        ))}
+      </div>
+      {orbStyles.map((style, idx) => (
+        <div key={`orb-${idx}`} className="glow-orb" style={style} />
+      ))}
+      {beamStyles.map((style, idx) => (
+        <div key={`beam-${idx}`} className="light-beam" style={style} />
+      ))}
+    </div>
   );
 }
 

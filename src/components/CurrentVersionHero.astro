@@ -2,7 +2,6 @@
 import type { Release, Translations, Locale } from '../types/index.js';
 import { formatDate } from '../i18n/utils.js';
 import { generateReleaseId, generateSectionId } from '../data/utils.js';
-import { getNestedTranslation } from '../i18n/utils.js';
 
 export interface Props {
   release: Release;
@@ -36,7 +35,7 @@ const getTypeColor = (type: string) => {
 
 const typeColor = getTypeColor(release.type);
 
-// Icon and gradient mapping for common keys, with defaults
+// Icon mapping for different section types
 const getIcon = (sectionId: string): string => {
   if (sectionId.includes('highlights')) return '✨';
   if (sectionId.includes('features')) return '🚀';
@@ -45,33 +44,40 @@ const getIcon = (sectionId: string): string => {
   return '📋';
 };
 
-const getGradient = (key: string) => {
-  if (key.includes('highlights')) return 'var(--gradient-text-highlights)';
-  if (key.includes('features')) return 'var(--gradient-text-features)';
-  if (key.includes('improvements')) return 'var(--gradient-text-improvements)';
-  if (key.includes('bugfixes')) return 'var(--gradient-text-bugfixes)';
-  return 'var(--gradient-text-features)';
-};
-
-const humanize = (key: string) => key.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-const getSectionTitle = (key: string) => {
-  const t = getNestedTranslation(translations, `sections.${key}`);
-  return t === `sections.${key}` ? humanize(key) : t;
-};
-
-// Build sections dynamically from content
-const sections = Object.entries(release.content)
-  .map(([key, items]) => ({
-    id: key,
-    title: getSectionTitle(key),
-    items: items,
-    gradient: getGradient(key),
-    icon: getIcon(key),
-  }))
-  .filter(section => Array.isArray(section.items) && section.items.length > 0);
+// Sections to display (only if they have content)
+const sections = [
+  {
+    id: 'highlights' as const,
+    title: translations.sections.highlights,
+    items: release.content.highlights || [],
+    gradient: 'var(--gradient-text-highlights)',
+    icon: getIcon('highlights'),
+  },
+  {
+    id: 'features' as const,
+    title: translations.sections.features,
+    items: release.content.features || [],
+    gradient: 'var(--gradient-text-features)',
+    icon: getIcon('features'),
+  },
+  {
+    id: 'improvements' as const,
+    title: translations.sections.improvements,
+    items: release.content.improvements || [],
+    gradient: 'var(--gradient-text-improvements)',
+    icon: getIcon('improvements'),
+  },
+  {
+    id: 'bugfixes' as const,
+    title: translations.sections.bugfixes,
+    items: release.content.bugfixes || [],
+    gradient: 'var(--gradient-text-bugfixes)',
+    icon: getIcon('bugfixes'),
+  },
+].filter(section => section.items.length > 0);
 ---
 
-<section class="hero" id={releaseId} data-release={release.version} aria-labelledby="hero-title">
+<section class="hero" id={releaseId} data-release={release.version} data-release-version={release.version} data-release-type={release.type} data-release-date={release.date} aria-labelledby="hero-title">
   <div class="hero__card glass">
     <div class="hero__header">
       <div class="hero__badge-container">
@@ -97,6 +103,7 @@ const sections = Object.entries(release.content)
     <div class="hero__content">
       {sections.map((section) => (
         <div
+          key={section.id}
           class="hero__section"
           id={generateSectionId(release.version, section.id)}
           data-section={generateSectionId(release.version, section.id)}
@@ -108,7 +115,7 @@ const sections = Object.entries(release.content)
           </h3>
           <ul class="hero__section-list">
             {section.items.map((item, index) => (
-              <li class="hero__section-item">
+              <li key={index} class="hero__section-item">
                 <span class="hero__section-bullet" aria-hidden="true"></span>
                 <span class="hero__section-text">{item}</span>
               </li>
@@ -141,6 +148,15 @@ const sections = Object.entries(release.content)
       0 0 0 1px rgba(139, 92, 246, 0.15),
       inset 0 1px 0 rgba(255, 255, 255, 0.1);
     transition: all var(--transition-normal);
+  }
+
+  .hero__card:hover {
+    background: rgba(30, 32, 48, 0.95);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(139, 92, 246, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   .hero__header {
@@ -189,7 +205,7 @@ const sections = Object.entries(release.content)
   }
 
   .hero__version {
-    font-size: var(--font-size-3xl);
+    font-size: var(--font-size-4xl);
     font-weight: var(--font-weight-bold);
     color: var(--text-primary);
     margin: 0 0 var(--spacing-sm) 0;
@@ -251,10 +267,17 @@ const sections = Object.entries(release.content)
     display: flex;
     align-items: flex-start;
     gap: var(--spacing-md);
-    padding: var(--spacing-sm) 0;
+    padding: var(--spacing-md);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     transition: all var(--transition-fast);
     margin-left: calc(var(--font-size-lg) + var(--spacing-md));
-    border-radius: var(--radius-sm);
+  }
+
+  .hero__section-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
   }
 
   .hero__section-bullet {
@@ -322,7 +345,7 @@ const sections = Object.entries(release.content)
     }
 
     .hero__version {
-      font-size: var(--font-size-2xl);
+      font-size: var(--font-size-3xl);
     }
 
     .hero__date {
@@ -350,7 +373,7 @@ const sections = Object.entries(release.content)
     }
 
     .hero__version {
-      font-size: var(--font-size-xl);
+      font-size: var(--font-size-2xl);
     }
 
     .hero__badge-container {
@@ -379,8 +402,16 @@ const sections = Object.entries(release.content)
       transition: none;
     }
 
+    .hero__card:hover {
+      transform: none;
+    }
+
     .hero__section-item {
       transition: none;
+    }
+
+    .hero__section-item:hover {
+      transform: none;
     }
   }
 
