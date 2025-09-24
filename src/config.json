@@ -1,0 +1,57 @@
+{
+  "app": {
+    "name": "Nite Notes",
+    "title": "Nite Notes",
+    "icon": "M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z",
+    "tagline": "Modern Release Notes",
+    "description": "Stay up to date with the latest features, improvements, and fixes for your applications."
+  },
+  "features": [
+    {
+      "title": "Always Improving",
+      "description": "Continuous updates and improvements to deliver the best experience.",
+      "icon": "M12 2L2 7V10C2 16 6 20.5 12 22C18 20.5 22 16 22 10V7L12 2Z"
+    },
+    {
+      "title": "Developer Friendly",
+      "description": "Built with modern web technologies and best practices.",
+      "icon": "M9.4 16.6L4.8 12L6.2 10.6L9.4 13.8L17.8 5.4L19.2 6.8L9.4 16.6Z"
+    }
+  ],
+  "miscInfo": [
+    {
+      "title": "Releases",
+      "desc": "50+",
+      "icon": "M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM19 19H5V5H19V19ZM17 12H7V14H17V12ZM15 16H7V18H15V16ZM17 8H7V10H17V8Z",
+      "style": {
+        "gradient": ["#8b5cf6", "#6366f1"]
+      }
+    },
+    {
+      "title": "GitHub Stars",
+      "desc": "2.1K",
+      "link": "https://github.com/yourusername/relese",
+      "icon": "M12 2L3.09 8.26L0 9L9 13.5L18 9L14.91 8.26L12 2Z",
+      "style": {
+        "gradient": ["#10b981", "#059669"]
+      }
+    },
+    {
+      "title": "Uptime",
+      "desc": "99.9%",
+      "icon": "M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1L9 7V9C9 10.1 9.9 11 11 11V13C11 14.1 11.9 15 13 15H15C16.1 15 17 14.1 17 13V11C18.1 11 19 10.1 19 9H21ZM11 22A2 2 0 0 1 13 20A2 2 0 0 1 15 22A2 2 0 0 1 13 24A2 2 0 0 1 11 22Z",
+      "style": {
+        "gradient": ["#f59e0b", "#d97706"]
+      }
+    },
+    {
+      "title": "Support",
+      "desc": "24/7",
+      "link": "mailto:support@example.com",
+      "icon": "M20 4H4C2.9 4 2.01 4.9 2.01 6L2 18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z",
+      "style": {
+        "gradient": ["#ef4444", "#dc2626"]
+      }
+    }
+  ]
+}

@@ -1,5 +1,8 @@
 ---
 import type { Locale, Translations } from '../types/index.js';
+import ThemeLanguageSelector from '../islands/ThemeLanguageSelector.tsx';
+import { getConfig, getVersionFromReleases, generateMiscInfoStyle } from '../utils/config.ts';
+import { loadReleases } from '../data/utils.js';
 
 export interface Props {
   translations: Translations;
@@ -7,6 +10,9 @@ export interface Props {
 }
 
 const { translations, locale } = Astro.props;
+const config = getConfig();
+const releases = await loadReleases();
+const version = getVersionFromReleases(releases);
 ---
 
 <header class="header" role="banner">
@@ -14,66 +20,72 @@ const { translations, locale } = Astro.props;
     <!-- Apple Control Center Style Grid -->
     <div class="header__control-grid">
 
-      <!-- Main Info Card (Brand + Description + Always Improving) -->
+      <!-- Main Info Card (Brand + Description + Features) -->
       <div class="control-card control-card--main">
         <div class="control-card__content">
           <div class="main-card__header">
             <div class="main-card__brand">
               <svg class="main-card__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z"/>
+                <path d={config.app.icon}/>
               </svg>
               <div class="main-card__title-group">
-                <span class="main-card__title">Nite Notes</span>
-                <span class="main-card__version">v2.1.0</span>
+                <span class="main-card__title">{config.app.name}</span>
+                <span class="main-card__version">{version}</span>
               </div>
             </div>
           </div>
 
           <div class="main-card__content">
-            <h1 class="main-card__page-title">{translations.page.title}</h1>
-            <p class="main-card__subtitle">{translations.page.subtitle}</p>
+            <p class="main-card__subtitle">{config.app.tagline}</p>
             <p class="main-card__description">
-              {translations.header.description}
+              {config.app.description}
             </p>
 
-            <div class="main-card__feature">
-              <div class="main-card__feature-icon">
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 2L2 7V10C2 16 6 20.5 12 22C18 20.5 22 16 22 10V7L12 2Z"/>
-                </svg>
-              </div>
-              <div class="main-card__feature-text">
-                <h3 class="main-card__feature-title">{translations.header.featureTitle}</h3>
-                <p class="main-card__feature-desc">{translations.header.featureDesc}</p>
-              </div>
+            <!-- Dynamic Features -->
+            <div class="main-card__features">
+              {config.features.map((feature) => (
+                <div class="main-card__feature">
+                  <div class="main-card__feature-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d={feature.icon}/>
+                    </svg>
+                  </div>
+                  <div class="main-card__feature-text">
+                    <h3 class="main-card__feature-title">{feature.title}</h3>
+                    <p class="main-card__feature-desc">{feature.description}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
+      <!-- Misc Info Row -->
+      <div class="misc-info-row">
+        {config.miscInfo.map((item) => {
+          const Component = item.link ? 'a' : 'div';
+          const componentProps = item.link ? { href: item.link, target: '_blank', rel: 'noopener noreferrer' } : {};
+          const customStyle = generateMiscInfoStyle(item);
 
-      <!-- Stats Row -->
-      <div class="stats-row">
-        <div class="control-card control-card--stat control-card--releases">
-          <div class="control-card__content">
-            <div class="stat-card__number">50+</div>
-            <div class="stat-card__label">{translations.header.stats.releases}</div>
-          </div>
-        </div>
-
-        <div class="control-card control-card--stat control-card--stars">
-          <div class="control-card__content">
-            <div class="stat-card__number">2.1K</div>
-            <div class="stat-card__label">{translations.header.stats.stars}</div>
-          </div>
-        </div>
-
-        <div class="control-card control-card--stat control-card--uptime">
-          <div class="control-card__content">
-            <div class="stat-card__number">99.9%</div>
-            <div class="stat-card__label">{translations.header.stats.uptime}</div>
-          </div>
-        </div>
+          return (
+            <Component
+              class={`control-card control-card--misc ${item.link ? 'control-card--clickable' : ''}`}
+              style={customStyle}
+              {...componentProps}
+            >
+              <div class="control-card__content">
+                <div class="misc-card__icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d={item.icon}/>
+                  </svg>
+                </div>
+                <div class="misc-card__number">{item.desc}</div>
+                <div class="misc-card__label">{item.title}</div>
+              </div>
+            </Component>
+          );
+        })}
       </div>
 
     </div>
@@ -118,11 +130,11 @@ const { translations, locale } = Astro.props;
     width: 100%;
   }
 
-  /* Stats Row */
-  .stats-row {
+  /* Misc Info Row */
+  .misc-info-row {
     grid-area: stats;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: var(--spacing-lg);
   }
 
@@ -155,6 +167,7 @@ const { translations, locale } = Astro.props;
 
   /* Grid Area Assignments */
   .control-card--main { grid-area: main; }
+  .control-card--controls { grid-area: controls; }
 
   /* Main Card (Brand + Description + Feature) */
   .control-card--main {
@@ -291,24 +304,92 @@ const { translations, locale } = Astro.props;
     line-height: var(--line-height-relaxed);
   }
 
+  .main-card__features {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+  }
 
-  /* Stats Cards Styling */
-  .control-card--stat {
+  .main-card__controls {
+    margin-top: var(--spacing-xl);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+
+  /* Misc Info Cards Styling */
+  .control-card--misc {
     text-align: center;
     justify-content: center;
     min-height: 120px;
     background: linear-gradient(135deg,
-      rgba(79, 70, 229, 0.15) 0%,
+      rgba(79, 70, 229, 0.08) 0%,
+      rgba(25, 27, 43, 0.6) 30%,
+      rgba(30, 32, 48, 0.7) 100%);
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    opacity: 0.8;
+  }
+
+  .control-card--misc.control-card--clickable {
+    cursor: pointer;
+    transition: all var(--transition-normal);
+  }
+
+  .control-card--misc.control-card--clickable:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.3),
+      0 6px 16px rgba(139, 92, 246, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .control-card--misc .control-card__content {
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
+  /* Custom gradient support */
+  .control-card--misc[style*="--card-gradient"] {
+    background: var(--card-gradient, linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(25, 27, 43, 0.6) 30%, rgba(30, 32, 48, 0.7) 100%));
+  }
+
+  /* Controls Card Styling */
+  .control-card--controls {
+    min-height: auto;
+    padding: var(--spacing-lg);
+    background: linear-gradient(135deg,
+      rgba(99, 102, 241, 0.15) 0%,
       rgba(25, 27, 43, 0.9) 30%,
       rgba(30, 32, 48, 0.9) 100%);
   }
 
-  .control-card--stat .control-card__content {
-    justify-content: center;
+  .control-card--controls .control-card__content {
+    display: flex;
+    flex-direction: column;
     align-items: center;
+    gap: var(--spacing-md);
   }
 
-  .stat-card__number {
+  .control-separator {
+    width: 100%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: var(--spacing-xs) 0;
+  }
+
+  .misc-card__icon {
+    width: 24px;
+    height: 24px;
+    color: var(--accent-purple);
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .misc-card__number {
     font-size: var(--font-size-3xl);
     font-weight: var(--font-weight-bold);
     color: var(--text-primary);
@@ -320,7 +401,7 @@ const { translations, locale } = Astro.props;
     filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.3));
   }
 
-  .stat-card__label {
+  .misc-card__label {
     font-size: var(--font-size-sm);
     color: var(--text-secondary);
     font-weight: var(--font-weight-medium);
@@ -345,8 +426,8 @@ const { translations, locale } = Astro.props;
         "stats";
     }
 
-    .stats-row {
-      grid-template-columns: repeat(3, 1fr);
+    .misc-info-row {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
 
     .control-card {
@@ -375,7 +456,7 @@ const { translations, locale } = Astro.props;
       gap: var(--spacing-md);
     }
 
-    .stats-row {
+    .misc-info-row {
       grid-template-columns: 1fr;
       gap: var(--spacing-md);
     }
@@ -390,7 +471,7 @@ const { translations, locale } = Astro.props;
       min-height: auto;
     }
 
-    .control-card--stat {
+    .control-card--misc {
       min-height: 100px;
     }
 
@@ -405,7 +486,7 @@ const { translations, locale } = Astro.props;
       gap: var(--spacing-md);
     }
 
-    .stat-card__number {
+    .misc-card__number {
       font-size: var(--font-size-2xl);
     }
   }

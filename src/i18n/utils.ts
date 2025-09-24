@@ -48,6 +48,16 @@ export interface Translations {
     latest: string;
     releasedOn: string;
   };
+  header?: {
+    description: string;
+    featureTitle: string;
+    featureDesc: string;
+    stats: {
+      releases: string;
+      stars: string;
+      uptime: string;
+    };
+  };
 }
 
 const translations: Record<Locale, Translations> = {

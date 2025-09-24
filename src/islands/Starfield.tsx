@@ -30,13 +30,13 @@ function createStarStyle(): CSSProperties {
   };
 }
 
-function createParticleStyle(): CSSProperties {
+function createParticleStyle(isStatic: boolean = false): CSSProperties {
   const size = Math.floor(Math.random() * 8) + 1;
   const posX = Math.floor(Math.random() * 100);
   const posY = Math.floor(Math.random() * 100);
   const delay = Math.random() * 20;
   const duration = Math.random() * 25 + 25;
-  const opacity = Math.random() * 0.55 + 0.05;
+  const opacity = isStatic ? (Math.random() * 0.15 + 0.02) : (Math.random() * 0.55 + 0.05);
   const blur = Math.random() * 2.5;
   return {
     width: `${size}px`,
@@ -51,7 +51,7 @@ function createParticleStyle(): CSSProperties {
   };
 }
 
-function createOrbStyle(isLowPerformance: boolean): CSSProperties {
+function createOrbStyle(isLowPerformance: boolean, isStatic: boolean = false): CSSProperties {
   const size = Math.floor(Math.random() * 200) + 150;
   const posX = Math.floor(Math.random() * 100);
   const posY = Math.floor(Math.random() * 100);
@@ -61,20 +61,27 @@ function createOrbStyle(isLowPerformance: boolean): CSSProperties {
   const maxBlur = isLowPerformance ? 20 : 50;
   const minBlur = isLowPerformance ? 5 : 30;
   const blur = Math.floor(Math.random() * (maxBlur - minBlur)) + minBlur;
-  const opacity = isLowPerformance ? 0.15 : 0.25;
+
+  let opacity;
+  if (isStatic) {
+    opacity = 0.12; // Static version with lower opacity
+  } else {
+    opacity = isLowPerformance ? 0.15 : 0.25;
+  }
+
   return {
     width: `${size}px`,
     height: `${size}px`,
     left: `${posX}%`,
     top: `${posY}%`,
     filter: `blur(${blur}px)`,
-    background: `radial-gradient(circle, hsla(${hue}, 100%, 70%, ${opacity}), hsla(${hue}, 100%, 50%, 0.05))`,
+    background: `radial-gradient(circle, hsla(${hue}, 100%, 70%, ${opacity}), hsla(${hue}, 100%, 50%, 0.03))`,
     animationDelay: `${delay}s`,
     animationDuration: `${duration}s`,
   };
 }
 
-function createBeamStyle(): CSSProperties {
+function createBeamStyle(isStatic: boolean = false): CSSProperties {
   const width = Math.floor(Math.random() * 200) + 100;
   const height = Math.floor(Math.random() * 200) + 300; // Tall enough to extend beyond viewport even when rotated
   const posX = Math.floor(Math.random() * 100);
@@ -89,6 +96,12 @@ function createBeamStyle(): CSSProperties {
   const lightness1 = Math.floor(Math.random() * 20) + 60; // 60-80%
   const lightness2 = Math.floor(Math.random() * 30) + 30; // 30-60%
 
+  // Reduce opacity for static version
+  const opacity1 = isStatic ? 0.06 : 0.15;
+  const opacity2 = isStatic ? 0.04 : 0.12;
+  const opacity3 = isStatic ? 0.03 : 0.08;
+  const opacity4 = isStatic ? 0.01 : 0.03;
+
   return {
     width: `${width}px`,
     height: `${height}vh`,
@@ -97,10 +110,10 @@ function createBeamStyle(): CSSProperties {
     ['--rotate' as any]: `${rotate}deg`,
     transform: `rotate(${rotate}deg)`,
     background: `linear-gradient(to bottom,
-      hsla(${hue}, ${saturation}%, ${lightness1}%, 0.15) 0%,
-      hsla(${hue}, ${saturation}%, ${Math.max(lightness1 - 10, 40)}%, 0.12) 25%,
-      hsla(${hue}, ${saturation}%, ${lightness2}%, 0.08) 60%,
-      hsla(${hue}, ${Math.min(saturation + 20, 100)}%, ${Math.max(lightness2 - 20, 10)}%, 0.03) 85%,
+      hsla(${hue}, ${saturation}%, ${lightness1}%, ${opacity1}) 0%,
+      hsla(${hue}, ${saturation}%, ${Math.max(lightness1 - 10, 40)}%, ${opacity2}) 25%,
+      hsla(${hue}, ${saturation}%, ${lightness2}%, ${opacity3}) 60%,
+      hsla(${hue}, ${Math.min(saturation + 20, 100)}%, ${Math.max(lightness2 - 20, 10)}%, ${opacity4}) 85%,
       hsla(${hue}, ${Math.min(saturation + 30, 100)}%, 5%, 0) 100%)`,
     animationDelay: `${delay}s`,
     animationDuration: `${duration}s`,
@@ -114,6 +127,7 @@ export default function Starfield() {
 
   const [isLowPerformance, setIsLowPerformance] = useState(prefersReducedMotion);
   const [animationsOff, setAnimationsOff] = useState(prefersReducedMotion);
+  const [manualControl, setManualControl] = useState(false);
   const [particleCount, setParticleCount] = useState<number>(25);
   const [orbCount, setOrbCount] = useState<number>(6);
   const [beamCount, setBeamCount] = useState<number>(3);
@@ -129,10 +143,46 @@ export default function Starfield() {
   }, []);
 
   const starStyles = useMemo(() => Array.from({ length: starsCount }, () => createStarStyle()), [starsCount]);
-  const orbStyles = useMemo(() => Array.from({ length: orbCount }, () => createOrbStyle(isLowPerformance)), [orbCount, isLowPerformance]);
-  const beamStyles = useMemo(() => Array.from({ length: beamCount }, () => createBeamStyle()), [beamCount]);
+  const particleStyles = useMemo(() => Array.from({ length: particleCount }, () => createParticleStyle(animationsOff)), [particleCount, animationsOff]);
+  const orbStyles = useMemo(() => Array.from({ length: orbCount }, () => createOrbStyle(isLowPerformance, animationsOff)), [orbCount, isLowPerformance, animationsOff]);
+  const beamStyles = useMemo(() => Array.from({ length: beamCount }, () => createBeamStyle(animationsOff)), [beamCount, animationsOff]);
 
   const rafRef = useRef<number | null>(null);
+
+  // Initialize from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('animations-preference');
+      if (saved) {
+        try {
+          const pref = JSON.parse(saved);
+          setManualControl(!pref.auto);
+          setAnimationsOff(!pref.enabled);
+          setIsLowPerformance(!pref.enabled);
+        } catch (e) {
+          console.warn('Failed to parse animations preference:', e);
+        }
+      }
+
+      // Listen for storage changes (when PerformanceToggle updates preference)
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'animations-preference' && e.newValue) {
+          try {
+            const pref = JSON.parse(e.newValue);
+            setManualControl(!pref.auto);
+            setAnimationsOff(!pref.enabled);
+            setIsLowPerformance(!pref.enabled);
+          } catch (err) {
+            console.warn('Failed to parse animations preference on storage change:', err);
+          }
+        }
+      };
+
+      window.addEventListener('storage', handleStorageChange);
+      return () => window.removeEventListener('storage', handleStorageChange);
+    }
+  }, []);
+
   useEffect(() => {
     if (prefersReducedMotion) {
       setIsLowPerformance(true);
@@ -142,7 +192,8 @@ export default function Starfield() {
       return;
     }
 
-    const DISABLE_THRESHOLD_FPS = 120;
+    const DISABLE_THRESHOLD_FPS = 30; // More realistic threshold for low-end devices
+    const ENABLE_THRESHOLD_FPS = 45; // Higher threshold for re-enabling to prevent flickering
     const SUSTAINED_SECONDS = 3; // consecutive seconds below/above threshold
 
     let frameCount = 0;
@@ -156,29 +207,34 @@ export default function Starfield() {
       if (now - lastTime >= 1000) {
         const fps = Math.round((frameCount * 1000) / (now - lastTime));
 
-        if (!animationsOff) {
-          if (fps < DISABLE_THRESHOLD_FPS) {
-            consecutiveBelow++;
-            consecutiveAbove = 0;
+        // Only auto-adjust if not in manual control mode
+        if (!manualControl) {
+          if (!animationsOff) {
+            if (fps < DISABLE_THRESHOLD_FPS) {
+              consecutiveBelow++;
+              consecutiveAbove = 0;
+            } else {
+              consecutiveAbove++;
+              consecutiveBelow = 0;
+            }
+            if (consecutiveBelow >= SUSTAINED_SECONDS) {
+              setAnimationsOff(true);
+              setIsLowPerformance(true);
+              console.log('🎭 Animations disabled due to low FPS:', fps);
+            }
           } else {
-            consecutiveAbove++;
-            consecutiveBelow = 0;
-          }
-          if (consecutiveBelow >= SUSTAINED_SECONDS) {
-            setAnimationsOff(true);
-            setIsLowPerformance(true);
-          }
-        } else {
-          if (fps >= DISABLE_THRESHOLD_FPS) {
-            consecutiveAbove++;
-            consecutiveBelow = 0;
-          } else {
-            consecutiveBelow++;
-            consecutiveAbove = 0;
-          }
-          if (consecutiveAbove >= SUSTAINED_SECONDS) {
-            setAnimationsOff(false);
-            setIsLowPerformance(false);
+            if (fps >= ENABLE_THRESHOLD_FPS) {
+              consecutiveAbove++;
+              consecutiveBelow = 0;
+            } else {
+              consecutiveBelow++;
+              consecutiveAbove = 0;
+            }
+            if (consecutiveAbove >= SUSTAINED_SECONDS) {
+              setAnimationsOff(false);
+              setIsLowPerformance(false);
+              console.log('🎭 Animations re-enabled, FPS improved:', fps);
+            }
           }
         }
 
@@ -196,19 +252,24 @@ export default function Starfield() {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       cancelAnimationFrame(startId);
     };
-  }, [prefersReducedMotion, animationsOff]);
+  }, [prefersReducedMotion, animationsOff, manualControl]);
 
   useEffect(() => {
     if (animationsOff) {
-      setParticleCount(0);
-      setOrbCount(0);
-      setBeamCount(0);
+      // Keep reduced elements visible but without animation
+      setParticleCount(8);
+      setOrbCount(3);
+      setBeamCount(2);
+    } else if (isLowPerformance) {
+      setParticleCount(15);
+      setOrbCount(4);
+      setBeamCount(2);
     } else {
       setParticleCount(25);
       setOrbCount(6);
       setBeamCount(3);
     }
-  }, [animationsOff]);
+  }, [animationsOff, isLowPerformance]);
 
   return (
     <div className={`animated-background${isLowPerformance ? ' low-performance' : ''}${animationsOff ? ' animations-off' : ''}`} style={starVarsStyle} aria-hidden="true">
@@ -217,6 +278,9 @@ export default function Starfield() {
           <div key={`star-${idx}`} className="star" style={style} />
         ))}
       </div>
+      {particleStyles.map((style, idx) => (
+        <div key={`particle-${idx}`} className="particle" style={style} />
+      ))}
       {orbStyles.map((style, idx) => (
         <div key={`orb-${idx}`} className="glow-orb" style={style} />
       ))}

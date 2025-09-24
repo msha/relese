@@ -40,15 +40,5 @@
   "currentVersion": {
     "latest": "Latest Release",
     "releasedOn": "Released on"
-  },
-  "header": {
-    "description": "Stay up to date with the latest features, improvements, and fixes for Nite Notes.",
-    "featureTitle": "Always Improving",
-    "featureDesc": "Continuous updates and improvements to deliver the best experience.",
-    "stats": {
-      "releases": "Releases",
-      "stars": "GitHub Stars",
-      "uptime": "Uptime"
-    }
   }
 }
