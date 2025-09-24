@@ -342,6 +342,27 @@ body::after {
   opacity: 0.1 !important;
 }
 
+/* Animations hard-off mode (sustained low FPS) */
+.animated-background.animations-off,
+.animated-background.animations-off * {
+  animation: none !important;
+  transition: none !important;
+}
+
+.animated-background.animations-off .star {
+  opacity: 0.15 !important;
+}
+
+.animated-background.animations-off .glow-orb,
+.animated-background.animations-off .light-beam {
+  display: none !important;
+}
+
+.animated-background.animations-off::before,
+.animated-background.animations-off::after {
+  opacity: 0.06 !important;
+}
+
 /* Subtle star twinkle animations */
 @keyframes starTwinkleSoft1 {
   0%, 100% { opacity: var(--rot-stars-opacity-1); }
@@ -733,7 +754,7 @@ html {
 /* Make it fixed when scrolling past the hero */
 .sticky-outline--desktop.sticky-outline--sticky {
   position: fixed;
-  left: calc(var(--container-left, 0px) - var(--outline-width) - var(--spacing-2xl));
+  left: calc(var(--container-left, 0px) - var(--outline-width) - var(--spacing-xs));
   top: var(--spacing-xl);
 }
 
@@ -759,27 +780,12 @@ html {
 
 .sticky-outline--desktop .sticky-outline__content {
   max-height: calc(100vh - var(--spacing-2xl) - var(--spacing-2xl) - 80px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--glass-border) transparent;
+  overflow-y: hidden;
+  position: relative;
 }
 
-.sticky-outline--desktop .sticky-outline__content::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sticky-outline--desktop .sticky-outline__content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sticky-outline--desktop .sticky-outline__content::-webkit-scrollbar-thumb {
-  background: var(--glass-border);
-  border-radius: 2px;
-}
-
-.sticky-outline--desktop .sticky-outline__content::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-purple);
-}
+/* hide native scrollbar since we will virtually clip and indicate */
+.sticky-outline--desktop .sticky-outline__content::-webkit-scrollbar { display: none; }
 
 /* Tablet Stacked Layout */
 .sticky-outline--tablet {
@@ -870,6 +876,7 @@ html {
 /* Content */
 .sticky-outline__content {
   padding: var(--spacing-lg);
+  position: relative;
 }
 
 .sticky-outline__content--mobile {
@@ -1101,6 +1108,24 @@ html {
 .sticky-outline__indicator--bottom {
   margin-top: var(--spacing-sm);
   margin-bottom: 0;
+}
+
+/* Fade overlay for clipped bottom content */
+.sticky-outline__fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 48px;
+  pointer-events: none;
+}
+
+.sticky-outline__fade--bottom {
+  bottom: 36px; /* leave space for indicator */
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(15, 17, 30, 0.6) 60%, rgba(15, 17, 30, 0.9) 100%);
+}
+
+[data-theme="light"] .sticky-outline__fade--bottom {
+  background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.7) 70%, rgba(255,255,255,0.9) 100%);
 }
 
 .sticky-outline__indicator-text {

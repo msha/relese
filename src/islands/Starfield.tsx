@@ -113,6 +113,7 @@ export default function Starfield() {
     : false;
 
   const [isLowPerformance, setIsLowPerformance] = useState(prefersReducedMotion);
+  const [animationsOff, setAnimationsOff] = useState(prefersReducedMotion);
   const [particleCount, setParticleCount] = useState<number>(25);
   const [orbCount, setOrbCount] = useState<number>(6);
   const [beamCount, setBeamCount] = useState<number>(3);
@@ -135,34 +136,52 @@ export default function Starfield() {
   useEffect(() => {
     if (prefersReducedMotion) {
       setIsLowPerformance(true);
+      setAnimationsOff(true);
       setOrbCount(3);
       setBeamCount(1);
       return;
     }
 
+    const DISABLE_THRESHOLD_FPS = 120;
+    const SUSTAINED_SECONDS = 3; // consecutive seconds below/above threshold
+
     let frameCount = 0;
     let lastTime = performance.now();
-    const fpsSamples: number[] = [];
+    let consecutiveBelow = 0;
+    let consecutiveAbove = 0;
 
     const measure = () => {
       const now = performance.now();
       frameCount++;
       if (now - lastTime >= 1000) {
         const fps = Math.round((frameCount * 1000) / (now - lastTime));
-        fpsSamples.push(fps);
-        if (fpsSamples.length > 5) fpsSamples.shift();
-        const avg = fpsSamples.reduce((a, b) => a + b, 0) / fpsSamples.length;
-        if (avg < 30 && !isLowPerformance) {
-          setIsLowPerformance(true);
-          setParticleCount(10);
-          setOrbCount(3);
-          setBeamCount(1);
-        } else if (avg > 50 && isLowPerformance && fpsSamples.length >= 3) {
-          setIsLowPerformance(false);
-          setParticleCount(25);
-          setOrbCount(6);
-          setBeamCount(3);
+
+        if (!animationsOff) {
+          if (fps < DISABLE_THRESHOLD_FPS) {
+            consecutiveBelow++;
+            consecutiveAbove = 0;
+          } else {
+            consecutiveAbove++;
+            consecutiveBelow = 0;
+          }
+          if (consecutiveBelow >= SUSTAINED_SECONDS) {
+            setAnimationsOff(true);
+            setIsLowPerformance(true);
+          }
+        } else {
+          if (fps >= DISABLE_THRESHOLD_FPS) {
+            consecutiveAbove++;
+            consecutiveBelow = 0;
+          } else {
+            consecutiveBelow++;
+            consecutiveAbove = 0;
+          }
+          if (consecutiveAbove >= SUSTAINED_SECONDS) {
+            setAnimationsOff(false);
+            setIsLowPerformance(false);
+          }
         }
+
         frameCount = 0;
         lastTime = now;
       }
@@ -177,10 +196,22 @@ export default function Starfield() {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       cancelAnimationFrame(startId);
     };
-  }, [isLowPerformance, prefersReducedMotion]);
+  }, [prefersReducedMotion, animationsOff]);
+
+  useEffect(() => {
+    if (animationsOff) {
+      setParticleCount(0);
+      setOrbCount(0);
+      setBeamCount(0);
+    } else {
+      setParticleCount(25);
+      setOrbCount(6);
+      setBeamCount(3);
+    }
+  }, [animationsOff]);
 
   return (
-    <div className={`animated-background${isLowPerformance ? ' low-performance' : ''}`} style={starVarsStyle} aria-hidden="true">
+    <div className={`animated-background${isLowPerformance ? ' low-performance' : ''}${animationsOff ? ' animations-off' : ''}`} style={starVarsStyle} aria-hidden="true">
       <div className="starfield" aria-hidden="true">
         {starStyles.map((style, idx) => (
           <div key={`star-${idx}`} className="star" style={style} />

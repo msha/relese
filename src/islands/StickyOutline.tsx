@@ -240,6 +240,8 @@ export default function StickyOutline({ releases, translations, availableVersion
   const [isTablet, setIsTablet] = useState(false);
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
   const [filters, setFilters] = useState<FilterState>({});
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [bottomHiddenCount, setBottomHiddenCount] = useState<number>(0);
 
   // Convert releases to navigation structure
   const navigationReleases: NavigationRelease[] = releases.map(release => {
@@ -275,9 +277,48 @@ export default function StickyOutline({ releases, translations, availableVersion
 
   // Calculate hidden counts for indicators
   const hiddenTitlesCount = titlesToHide; // How many titles are hidden in outline
-  const totalReleases = navigationReleases.length;
-  const releasesBelowViewport = totalReleases - passedReleasesCount; // Releases not yet passed (below current scroll position)
-  const unableToShowCount = releasesBelowViewport; // Releases unable to show due to outline height constraint
+
+  // Measure-based count of releases clipped at the bottom of the outline content
+  const computeHiddenCounts = useCallback(() => {
+    const container = contentRef.current;
+    if (!container) {
+      setBottomHiddenCount(0);
+      return;
+    }
+    const containerRect = container.getBoundingClientRect();
+    const groups = Array.from(container.querySelectorAll('.sticky-outline__release-group')) as HTMLElement[];
+    if (groups.length === 0) {
+      setBottomHiddenCount(0);
+      return;
+    }
+
+    let bottomHidden = 0;
+    for (const group of groups) {
+      const rect = group.getBoundingClientRect();
+      // Count groups entirely below the visible container area
+      if (rect.top >= containerRect.bottom - 1) {
+        bottomHidden++;
+      }
+    }
+
+    setBottomHiddenCount(bottomHidden);
+  }, []);
+
+  useEffect(() => {
+    // Recompute whenever layout could change
+    const raf = requestAnimationFrame(computeHiddenCounts);
+    window.addEventListener('resize', computeHiddenCounts);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', computeHiddenCounts);
+    };
+  }, [computeHiddenCounts]);
+
+  useEffect(() => {
+    // Debounce via rAF for scroll-driven layout changes affecting outline heights
+    const raf = requestAnimationFrame(computeHiddenCounts);
+    return () => cancelAnimationFrame(raf);
+  }, [computeHiddenCounts, scrollState, isFiltersExpanded, isTablet, isMobile, releasesToHideTitles.length]);
 
   // Filter handling functions
   const handleFilterChange = useCallback((key: keyof FilterState, value: string | undefined) => {
@@ -614,7 +655,7 @@ export default function StickyOutline({ releases, translations, availableVersion
         {renderInlineFilters()}
 
         {!isCollapsed && (
-          <div id="outline-content" className="sticky-outline__content sticky-outline__content--mobile">
+          <div id="outline-content" className="sticky-outline__content sticky-outline__content--mobile" ref={contentRef}>
             {/* Top indicator for hidden titles */}
             {hiddenTitlesCount > 0 && (
               <div className="sticky-outline__indicator sticky-outline__indicator--top">
@@ -658,11 +699,11 @@ export default function StickyOutline({ releases, translations, availableVersion
               })}
             </div>
 
-            {/* Bottom indicator for releases unable to show due to outline height */}
-            {unableToShowCount > 0 && (
+            {/* Bottom indicator for releases unable to show due to outline height (mobile keeps existing logic) */}
+            {bottomHiddenCount > 0 && (
               <div className="sticky-outline__indicator sticky-outline__indicator--bottom">
                 <span className="sticky-outline__indicator-text">
-                  {unableToShowCount} {unableToShowCount === 1 ? 'release' : 'releases'} unable to show due to outline length
+                  {bottomHiddenCount} {bottomHiddenCount === 1 ? 'release' : 'releases'} unable to show due to outline length
                 </span>
               </div>
             )}
@@ -700,7 +741,7 @@ export default function StickyOutline({ releases, translations, availableVersion
         {/* Inline Filters Section - placed directly under header on tablet */}
         {renderInlineFilters()}
 
-        <div className="sticky-outline__content sticky-outline__content--tablet">
+        <div className="sticky-outline__content sticky-outline__content--tablet" ref={contentRef}>
           {/* Top indicator for hidden titles */}
           {hiddenTitlesCount > 0 && (
             <div className="sticky-outline__indicator sticky-outline__indicator--top">
@@ -767,13 +808,16 @@ export default function StickyOutline({ releases, translations, availableVersion
             })}
           </nav>
 
-          {/* Bottom indicator for releases unable to show due to outline height */}
-          {unableToShowCount > 0 && (
+          {/* Fade overlay and bottom indicator when items are clipped */}
+          {bottomHiddenCount > 0 && (
+            <>
+              <div className="sticky-outline__fade sticky-outline__fade--bottom" aria-hidden="true" />
             <div className="sticky-outline__indicator sticky-outline__indicator--bottom">
               <span className="sticky-outline__indicator-text">
-                {unableToShowCount} {unableToShowCount === 1 ? 'release' : 'releases'} unable to show due to outline length
+                {bottomHiddenCount} {bottomHiddenCount === 1 ? 'release' : 'releases'} unable to show due to outline length
               </span>
             </div>
+            </>
           )}
         </div>
         {/* Inline Filters Section duplicated at bottom removed; now under header */}
@@ -806,7 +850,7 @@ export default function StickyOutline({ releases, translations, availableVersion
       {/* Inline Filters Section - placed directly under header on desktop */}
       {renderInlineFilters()}
 
-      <div className="sticky-outline__content">
+      <div className="sticky-outline__content" ref={contentRef}>
         {/* Top indicator for hidden titles */}
         {hiddenTitlesCount > 0 && (
           <div className="sticky-outline__indicator sticky-outline__indicator--top">
@@ -873,13 +917,16 @@ export default function StickyOutline({ releases, translations, availableVersion
           })}
         </nav>
 
-        {/* Bottom indicator for releases unable to show due to outline height */}
-        {unableToShowCount > 0 && (
-          <div className="sticky-outline__indicator sticky-outline__indicator--bottom">
-            <span className="sticky-outline__indicator-text">
-              {unableToShowCount} {unableToShowCount === 1 ? 'release' : 'releases'} unable to show due to outline length
-            </span>
-          </div>
+        {/* Fade overlay and bottom indicator when items are clipped */}
+        {bottomHiddenCount > 0 && (
+          <>
+            <div className="sticky-outline__fade sticky-outline__fade--bottom" aria-hidden="true" />
+            <div className="sticky-outline__indicator sticky-outline__indicator--bottom">
+              <span className="sticky-outline__indicator-text">
+                {bottomHiddenCount} {bottomHiddenCount === 1 ? 'release' : 'releases'} unable to show due to outline length
+              </span>
+            </div>
+          </>
         )}
       </div>
       {/* Inline Filters Section duplicated at bottom removed; now under header */}
